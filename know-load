@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+import sys
+
+from rdflib import Graph, URIRef
+import Basics
+
+kb = Basics.kbConnect()
+
+for uri in sys.argv[1:]:
+    print("Loading {} ...".format(uri))
+    kb.load(uri)
+
+

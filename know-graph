@@ -1,0 +1,11 @@
+#!/usr/bin/python
+
+from rdflib import Graph
+import Basics
+
+kb = Basics.kbConnect()
+
+ctxts = { g.identifier for g in kb.contexts() }
+
+for ctx in ctxts: print(ctx)
+
