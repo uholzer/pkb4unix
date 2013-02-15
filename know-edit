@@ -1,0 +1,61 @@
+#!/usr/bin/python3
+
+import argparse
+from tempfile import NamedTemporaryFile
+from sys import stderr
+from sys import stdin, stdout, stderr
+import subprocess
+
+
+argparser = argparse.ArgumentParser(description='Read from STDIN, edit, output to STDOUT')
+argparser.add_argument('-e', '--editor', dest='editor', metavar='CMD', default="editor",
+                   help='The editor to be used')
+argparser.add_argument('-l', '--lint', dest='lint', metavar='CMD',
+                   help='Run this command to validate the input. If the return value is nonzero, edit again')
+
+args = argparser.parse_args()
+
+datain = stdin.buffer
+dataout = stdout.buffer
+
+if not stderr.isatty():
+    print("STDERR must be a TTY", file=stderr)
+    exit(1)
+
+def readTerminal():
+    import termios, tty
+    fd = stderr.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd, when=termios.TCSADRAIN)
+        with open(fd, mode="rb", closefd=False, buffering=0) as terminal:
+            char = terminal.read(1).decode("UTF-8")
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    return char
+    
+
+def edit(filename):
+    fail = subprocess.call("{} {}".format(args.editor, filename), stdin=stderr, stdout=stderr, shell=True)
+    if fail: exit(1)
+    if args.lint:
+        if subprocess.call((args.lint, filename)):
+            print("{} considers data invalid.".format(args.lint), file=stderr)
+            print("Edit again [a], fail [f] or continue [c]?", file=stderr)
+            choice = readTerminal()
+            if choice == "f":
+                exit(1)
+            elif choice == "c":
+                return True
+            else:
+                print("Editing again.", file=stderr)
+                return False
+    return True
+
+with NamedTemporaryFile() as temp:
+    for x in iter(lambda: datain.read(4096), b''): temp.write(x)
+    temp.flush()
+    while not edit(temp.name): pass
+    temp.seek(0)
+    for x in iter(lambda: temp.read(4096), b''): dataout.write(x)
+
