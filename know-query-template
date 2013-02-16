@@ -1,0 +1,28 @@
+#!/usr/bin/python3
+
+import argparse
+import sys
+
+from rdflib import Graph
+import Basics
+
+argparser = argparse.ArgumentParser(description=('Generates a template '
+            'for a SQPARQL query, including prefix declarations'))
+#argparser.add_argument('filename', nargs='?', metavar='FILE',
+                    #help=('Load SPARQL query from file. If not given, load it from STDIN'))
+
+args = argparser.parse_args()
+
+kb = Basics.kbConnect()
+
+nss = kb.query("SELECT DISTINCT ?prefix ?ns WHERE { ?ns kb:prefix ?prefix }", initNs={'kb': Basics.NS_KB})
+
+for ns in nss:
+    print("PREFIX {}: <{}>".format(*ns))
+
+print("SELECT *")
+print("WHERE {")
+print("")
+print("}")
+print("LIMIT 100")
+

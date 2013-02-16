@@ -6,6 +6,10 @@ import sys
 QUERY_URL = "http://localhost:8080/openrdf-sesame/repositories/pkb"
 UPDATE_URL = "http://localhost:8080/openrdf-sesame/repositories/pkb/statements"
 INDIRECT_GRAPH_STORE = "http://localhost:8080/openrdf-sesame/repositories/pkb/rdf-graphs/service"
+PROVENANCE = "kb:provenance"
+USER_NAMESPACES = "kb:namespaces"
+
+NS_KB = rdflib.Namespace("http://www.andonyar.com/rec/2012/pkb/conf#")
 
 contentTypes = {
     "rdf": "application/rdf+xml",
