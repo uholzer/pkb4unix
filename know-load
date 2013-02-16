@@ -1,14 +1,44 @@
 #!/usr/bin/python3
 
 import sys
+import os
+import urllib
+import argparse
 
 from rdflib import Graph, URIRef
 import Basics
 
-kb = Basics.kbConnect()
+argparser = argparse.ArgumentParser(description='Load a graph into the SPARQL endpoint')
+argparser.add_argument('files', nargs='*', metavar='FILE',
+                    help=('Files to load. If no files are given, read from STDIN.'
+                          '(Reading from STDIN is inefficient, because '
+                          'in order to determine the Content-length, '
+                          'all data must be read before it can be sent '
+                          'to the server.)'))
+argparser.add_argument('-i', '--identifier', metavar='URI', dest='identifier',
+                    help='Override graph name. Only useful if you load just one file or read from STDIN.')
+argparser.add_argument('-t', '--content-type', dest='contentType', metavar='TYPE',
+                    help='Override guessing of the correct Content-type.')
 
-for uri in sys.argv[1:]:
-    print("Loading {} ...".format(uri))
-    kb.load(uri)
+args = argparser.parse_args()
 
+if not args.files:
+    args.files.append(None)
+    if not (args.identifier and args.contentType):
+        print("When reading from STDIN, --identifier and --content-type must be used", file=sys.stderr)
+        exit(1)
+
+for filename in args.files:
+    url = args.identifier or Basics.absurl(filename)
+    print("Loading {} as {} ...".format(filename if filename is not None else "STDIN", url))
+    if filename is not None:
+        f = open(filename, mode="br")
+    else:
+        # Need to read all data beforehand, otherwise the
+        # Content-length can not be determined by http.client.
+        buf = sys.stdin.buffer
+        f = buf.read()
+    Basics.put_data(f, url, args.contentType or Basics.guessContentType(filename))
+    if filename is not None:
+        f.close()
 
