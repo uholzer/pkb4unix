@@ -1,0 +1,26 @@
+#!/usr/bin/python3
+
+import argparse
+import sys
+
+from rdflib import Graph
+import Basics
+
+argparser = argparse.ArgumentParser(description='Query a SPARQL endpoint')
+argparser.add_argument('filename', nargs='?', metavar='FILE',
+                    help=('Load SPARQL query from file. If not given, load it from STDIN'))
+
+args = argparser.parse_args()
+
+if args.filename:
+    with open(args.filename, mode="r") as f:
+        query = f.read()
+else:
+    query = sys.stdin.read()
+
+kb = Basics.kbConnect()
+
+result = kb.query(query)
+
+for r in result: print(r)
+
