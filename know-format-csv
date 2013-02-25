@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+
+import sys
+import csv
+import argparse
+import textwrap
+
+fieldhandlers = {
+    "title": lambda row: ("\033[1m{}\033[0m" if sys.stdout.isatty else "=={}==").format(row.pop(0)),
+    "paragraph": lambda row: "\n" + textwrap.fill(row.pop(0),initial_indent=' '*8,subsequent_indent=' '*4) + "\n",
+    "uri": lambda row: "<{}> ".format(row.pop(0)),
+    "verbatim": lambda row: row.pop(0),
+    "n": lambda row: "\n",
+    "ignore": lambda row: row.pop(0) and "",
+    "s": lambda row: ' ',
+    "t": lambda row: '\t'
+}
+
+argparser = argparse.ArgumentParser(description='Format CSV data')
+argparser.add_argument('-f', '--fields', nargs='*',
+                    choices=fieldhandlers.keys(),
+                    metavar='TYPE', dest='fields',
+                    help=('Describes how to format the fields from the CSV data. '
+                          'This option has to be given as many times as there '
+                          'are fields in the CSV data.'))
+
+args = argparser.parse_args()
+
+
+fd = sys.stdin.fileno()
+# Reopen stdin with newline='', because csv.reader requires it
+csvin = open(fd, mode="r", closefd=False, newline='')
+
+reader = csv.reader(csvin, delimiter=',', quotechar='"', skipinitialspace=True)
+text = ''
+for row in reader:
+    row = list(row)
+    for field in args.fields:
+        text = fieldhandlers[field](row)
+        print(text, end='')
+            
+csvin.close()
+

@@ -1,0 +1,47 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import urllib
+import argparse
+import http.client
+from subprocess import Popen, PIPE
+
+from rdflib import Graph, URIRef
+import Basics
+
+argparser = argparse.ArgumentParser(description='Search the Internet for Resources')
+argparser.add_argument('keyword',
+                    help=('Keyword to query for'))
+argparser.add_argument('-s', '--service', nargs='*', metavar='service', dest='service',
+                    help='Service to be queried. Curretnly, only "dbpedia" is supported.')
+argparser.add_argument('-l', '--limit', dest='limit', metavar='L',
+                    help='Set maximal number of results. (Default depends on service)')
+argparser.add_argument('-c', '--class', dest='cls', metavar='class',
+                    help='For some services, the query can be restricted to a class')
+argparser.add_argument('-d', '--descr', dest='show_description', action='store_true',
+                    help='Show descriptions')
+argparser.add_argument('-u', '--raw-uri', dest='raw_uri', action='store_true',
+                    help='Only list URIs, one per line')
+
+args = argparser.parse_args()
+
+def query_dbpedia():
+    query = urllib.parse.urlencode({k: v for (k,v) in {'QueryString': args.keyword, 'QueryClass': args.cls, 'MaxHits': args.limit}.items() if v})
+    url = "http://lookup.dbpedia.org/api/search.asmx/KeywordSearch?{}".format(query)
+    response = urllib.request.urlopen(url)
+    if args.raw_uri:
+        formatter_opts = '-f ignore verbatim ignore n'
+    else:
+        formatter_opts = '-f title t uri' + (' paragraph' if args.show_description else ' ignore') + ' n'
+    with Popen(["xsltproc dbpedia_api2csv.xsl - | ./know-format-csv " + formatter_opts], stdin=PIPE, shell=True) as proc:
+        for x in iter(lambda: response.read(4096), b''): proc.stdin.write(x)
+
+services = { "dbpedia": query_dbpedia }
+
+if args.service:
+    for service in args.services: services[service]()
+else:
+    for service in services.values():
+        service()
+
