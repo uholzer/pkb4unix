@@ -1,0 +1,20 @@
+#!/usr/bin/python3
+
+import subprocess
+import sys
+import argparse
+
+argparser = argparse.ArgumentParser(description='Generate an urn:uuid: URI')
+argparser.add_argument('uuid', nargs='?',
+                    help=('uuid to use. If not given, uuidgen is called'))
+argparser.add_argument('-r', '--no-newline', dest='newline', action='store_false',
+                    help='No newline at end of URI (default if no terminal is present')
+
+args = argparser.parse_args()
+
+if not args.uuid:
+    args.uuid = subprocess.check_output(["uuidgen"]).decode('UTF-8')
+    args.uuid = args.uuid.rstrip("\n ")
+
+print("urn:uuid:{}".format(args.uuid), end='\n' if args.newline else '')
+
