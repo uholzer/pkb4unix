@@ -25,6 +25,7 @@ def fileurl2path(url):
 def absurl(url, base=None):
     base = base if base else os.path.abspath(".")
     base = "file://" + urllib.request.pathname2url(base)
+    url = urllib.parse.quote(url)
     if base[-1] != "/": base += "/"
     return urllib.parse.urljoin(base, url)
 
