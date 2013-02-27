@@ -50,7 +50,50 @@ def put_data(data, identifier, contentType):
     connection.close()
     return status
 
+def get_data(identifier, contentType):
+    """data can be an open file, an iterable (since Python 3.2), a bytes or a string object"""
+    import http.client
+    parsedURL = urllib.parse.urlparse(UPDATE_URL)
+    connType = { "http": http.client.HTTPConnection, "https": http.client.HTTPSConnection }[parsedURL.scheme]
+    connection = connType(parsedURL.hostname, port=parsedURL.port)
+    url = "{}?graph={}".format(INDIRECT_GRAPH_STORE, urllib.parse.quote_plus(identifier))
+    connection.request("GET", url, headers={ 'Accept': contentType })
+    return HTTPSPARQLResponse(connection)
+
 def kbConnect():
     kb = rdflib.ConjunctiveGraph("SPARQLUpdateStore", identifier='__UNION__')
     kb.open(("http://localhost:8080/openrdf-sesame/repositories/pkb", "http://localhost:8080/openrdf-sesame/repositories/pkb/statements"))
     return kb
+
+class HTTPSPARQLResponse:
+    def __init__(self, connection):
+        """
+        connection must be a HTTP connection with which a request
+        has already been sent.
+        """
+        
+        self.connection = connection
+        self.response = connection.getresponse()
+
+    def __enter__(self):
+        return self;
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.connection.close()
+
+    def close(self):
+        self.connection.close()
+
+    @property
+    def headers(self):
+        return self.response.getheaders()
+
+    @property
+    def status(self):
+        return self.response.status
+
+    def read(self, n=-1):
+        return self.response.read(n)
+
+
+
