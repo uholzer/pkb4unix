@@ -17,6 +17,13 @@ argparser.add_argument('-c', '--class', dest='class', metavar='CLASS',
 
 args = argparser.parse_args()
 
+if args.outfile:
+    dest = open(args.outfile, mode='wb')
+else:
+    dest = sys.stdout.buffer
+
+sys.stdout = sys.stderr
+
 g = Graph()
 variables = dict()
 ns = dict()
@@ -133,9 +140,5 @@ commands = iter(template.readline, '')
 
 do_batch(commands)
 
-if args.outfile:
-    dest = open(args.outfile, mode='wb')
-else:
-    dest = sys.stdout.buffer
 g.serialize(dest)
 
