@@ -1,0 +1,41 @@
+#!/usr/bin/python3
+
+import argparse
+import sys
+
+from rdflib import URIRef
+import Basics
+
+argparser = argparse.ArgumentParser(description='Merge graphs')
+argparser.add_argument('dest_graph', metavar='DEST_GRAPH',
+                    help=('Merge into this graph'))
+argparser.add_argument('src_graphs', nargs='+', metavar='GRAPH',
+                    help=('Graphs to be merged'))
+
+args = argparser.parse_args()
+
+args.dest_graph = Basics.absurl(args.dest_graph)
+args.src_graphs = [Basics.absurl(g) for g in args.src_graphs]
+
+q = """
+INSERT {
+    GRAPH ?to {
+        ?s ?p ?o .
+    }
+}
+WHERE {
+    GRAPH ?from {
+        ?s ?p ?o .
+    }
+"""
+q += "VALUES (?from ?to) {\n" 
+q += "\n".join(["({} {})".format(URIRef(g).n3(), URIRef(args.dest_graph).n3()) for g in args.src_graphs])
+q += "\n}\n"
+q += "}"
+
+
+kb = Basics.kbConnect()
+
+kb.store.update(q)
+
+
