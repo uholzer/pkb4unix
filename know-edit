@@ -11,7 +11,9 @@ argparser = argparse.ArgumentParser(description='Read from STDIN, edit, output t
 argparser.add_argument('-e', '--editor', dest='editor', metavar='CMD', default="editor",
                    help='The editor to be used')
 argparser.add_argument('-l', '--lint', dest='lint', metavar='CMD',
-                   help='Run this command to validate the input. If the return value is nonzero, edit again')
+                   help='Run this command to validate the changes. If the return value is nonzero, edit again')
+argparser.add_argument('-0', '--null', dest='start_empty', action="store_true",
+                   help='Start with an empty page instead of reading from STDIN')
 
 args = argparser.parse_args()
 
@@ -53,7 +55,8 @@ def edit(filename):
     return True
 
 with NamedTemporaryFile() as temp:
-    for x in iter(lambda: datain.read(4096), b''): temp.write(x)
+    if not args.start_empty:
+        for x in iter(lambda: datain.read(4096), b''): temp.write(x)
     temp.flush()
     while not edit(temp.name): pass
     temp.seek(0)
