@@ -1,0 +1,141 @@
+#!/usr/bin/python3
+
+import argparse
+import sys
+import subprocess
+
+from rdflib import Graph, Literal, BNode, URIRef
+from rdflib_sparql.processor import processUpdate
+
+argparser = argparse.ArgumentParser(description='Construct a graph based on a template or RDF schema')
+argparser.add_argument('template', nargs='?',
+                    help='Construct according to template given in FILE')
+argparser.add_argument('-o', '--output', metavar='FILE', dest='outfile', nargs=1,
+                    help=('File the graph should be written to. If omitted, it will be written to STDOUT.'))
+argparser.add_argument('-c', '--class', dest='class', metavar='CLASS',
+                    help='Construct instance of this RDFS class (not yet implemented, can not be used together with -t)')
+
+args = argparser.parse_args()
+
+g = Graph()
+variables = dict()
+ns = dict()
+
+print("""Available commands:
+! CMD
+    Executes CMD in a shell
+| CMD
+    Executes CMD in a shell and takes output as value
+@
+    Same as `| know edit --null`
+""")
+
+class TemplateError(Exception):
+    pass
+
+def do_ns(l):
+    (_, prefix, namespace) = l.split(None, 2)
+    namespace = namespace.strip()
+    print("PREFIX {}: <{}>".format(prefix, namespace), file=sys.stderr)
+    ns[prefix] = URIRef(namespace)
+
+def do_ask(l):
+    (_, nodetype, varname, descr) = l.split(None, 3)
+    descr = descr.strip()
+    print("{} ({}):".format(varname, descr), file=sys.stderr)
+    if not nodetype in ('Literal', 'URI'): raise TemplateError("Bad nodetype")
+
+    # use existing value
+    oldvalue = ''
+    if varname in variables:
+        if isinstance(variables[varname], URIRef) and nodetype=='URI':
+            oldvalue = variables[varname]
+            print("[{}]".format(str(oldvalue)), file=sys.stderr)
+        elif isinstance(variables[varname], Literal) and nodetype=='Literal':
+            oldvalue = variables[varname]
+            print("[{}]".format(str(oldvalue)), file=sys.stderr)
+
+    value = input("{}> ".format(nodetype))
+    if value:
+        if value[0] == '@':
+            value = '| ./know-edit --null'
+        if value[0] == '!':
+            subprocess.call(value[1:], shell=True, stdout=sys.stderr)
+            return do_ask(l) # start over
+        elif value[0] == '|':
+            try:
+                value = subprocess.check_output(value[1:], shell=True)
+            except (subprocess.CalledProcessError):
+                print("Your shell command failed, try again!", file=sys.stderr)
+                return do_ask_(l)
+    else:
+        value = oldvalue
+    if nodetype=='URI': value = URIRef(value)
+    if nodetype=='Literal': value = Literal(value)
+    variables[varname] = value
+
+def do_query(q):
+    raise NotImplementedError()
+
+def do_update(q):
+    processUpdate(g, q,
+        initNs=ns,
+        initBindings=variables
+    )
+
+def do_batch(commands):
+    commands = iter(commands)
+    while True:
+        try:
+            c = next(commands)
+        except StopIteration:
+            break
+        try:
+            if c.startswith("<QUERY>"):
+                query = ""
+                while True:
+                    l = next(commands)
+                    if l.startswith("</QUERY>"): break
+                    query += l
+                do_query(query)
+            elif c.startswith("<UPDATE>"):
+                update = ""
+                while True:
+                    l = next(commands)
+                    if l.startswith("</UPDATE>"): break
+                    update += l
+                do_update(update)
+            elif c.startswith("<LOOP>"):
+                loop = list()
+                while True:
+                    l = next(commands)
+                    if l.startswith("</LOOP>"): break
+                    loop.append(l)
+                while input("{} [y/n]>".format(c[6:].strip())).strip()=='y':
+                    do_batch(iter(loop))
+            elif c.startswith("ASK"):
+                do_ask(c)
+            elif c.startswith("NS"):
+                do_ns(c)
+            elif c.startswith("#"):
+                pass
+            elif c=='' or c.isspace():
+                pass
+            else:
+                TemplateError("Bad line: {}".format(c))
+        except StopIteration:
+            raise TemplateError("Unexpected EOF")
+
+
+template = open(args.template, mode='r')
+
+commands = iter(template.readline, '')
+
+do_batch(commands)
+
+if args.outfile:
+    dest = open(args.outfile, mode='wb')
+else:
+    dest = sys.stdout.buffer
+g.serialize(dest)
+
