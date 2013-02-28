@@ -1,0 +1,115 @@
+#!/usr/bin/python3
+
+import argparse
+import sys
+import os
+
+def run(executable, args):
+    os.execvp('{}/{}'.format(os.environ['KNOW_PATH'],executable), [executable] + args)
+
+argparser = argparse.ArgumentParser(
+    description='Knowledge Base Toolkit',
+    add_help=False
+)
+
+relevant_env = {
+    'KNOW_ENDPOINT_QUERY': {
+        'shortopt': '-Q',
+        'metavar': 'URL',
+        'default': "http://localhost:8080/openrdf-sesame/repositories/pkb", 
+        'help': "URL of the SPARQL endpoint for queries"
+    },
+    'KNOW_ENDPOINT_UPDATE': {
+        'shortopt': '-U',
+        'metavar': 'URL',
+        'default': "http://localhost:8080/openrdf-sesame/repositories/pkb/statements",
+        'help': "URL of the SPARQL endpoint for updates"
+    },
+    'KNOW_ENDPOINT_INDIRECT': {
+        'shortopt': '-I',
+        'metavar': 'URL',
+        'default': "http://localhost:8080/openrdf-sesame/repositories/pkb/rdf-graphs/service",
+        'help': "URL of the SPARQL endpoint's inditirect graph store"
+    },
+    'KNOW_PROVENANCE_GRAPH': {
+        'shortopt': '-P',
+        'metavar': 'URI',
+        'default': "kb:provenance",
+        'help': "URI of the graph storing provenance information"
+    },
+    'KNOW_NS_GRAPH': {
+        'shortopt': '-N',
+        'metavar': 'URI',
+        'default': "kb:namespaces",
+        'help': "URI of the graph containing information about namespaces"
+    },
+    'KNOW_PATH': {
+        'shortopt': '-E',
+        'metavar': 'DIR',
+        'default': "/home/urs/p/knowledge/knowbase",
+        'help': "Location of executables"
+    }
+}
+
+for (k,info) in sorted(relevant_env.items()):
+    argparser.add_argument(info['shortopt'], '--'+k.lower().replace('_','-'), dest=k, metavar=info['metavar'],
+                        default=None, help=info['help'])
+
+argparser.add_argument('--show-conf', dest='show', action='store_true',
+                    help='Show current configuration and exit')
+
+subparsers = argparser.add_subparsers(dest='subcmd')
+subparsers.add_parser('help', help='show this help message and exit')
+
+subcommands = [
+    ('construct', 'construct a graph'),
+    ('edit', 'read from stdin, edit, print on stdout'),
+    ('format-csv', 'csv formatter'),
+    ('graph', 'graph manipulations'),
+    ('load', 'load a graph into the endpoint'),
+    ('merge', 'merge two graphs in the endpoint'),
+    ('query', 'query the endpoint'),
+    ('query-template', 'create a template of a SPARQL query'),
+    ('save', 'write a graph from the endpoint to a file'),
+    ('search', 'search the semantic web'),
+    ('uuid', 'generate a urn:uuid URI')
+]
+
+for (cmd, desc) in subcommands:
+    p = subparsers.add_parser(cmd, help=desc)
+    p.add_argument('subargs', metavar='ARG', nargs='*')
+
+arglist = []
+subarglist = []
+subcommands_names = {c[0] for c in subcommands}
+for (i, a) in enumerate(sys.argv[1:]):
+    arglist.append(a)
+    if a in subcommands_names:
+        subarglist = sys.argv[i+2:]
+        break
+
+args = argparser.parse_args(arglist)
+if args.subcmd=='help':
+    argparser.print_help()
+    print("\nCurrent Configuration:")
+
+for (k, info) in sorted(relevant_env.items()):
+    if getattr(args, k):
+        value = getattr(args, k)
+        origin = "command line option --{}".format(k.lower().replace('_','-'))
+    elif k in os.environ:
+        value = os.environ[k]
+        origin = "environment variable {}".format(k)
+    else:
+        value = info['default']
+        origin = "default"
+    os.environ[k] = value
+    if args.subcmd=='help':
+        print("{}: {} (by {})".format(k, value, origin))
+if args.subcmd=='help': exit(0)
+    
+run('know-'+args.subcmd, subarglist)
+
+
+
+
