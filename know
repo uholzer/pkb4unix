@@ -55,10 +55,7 @@ for (k,info) in sorted(relevant_env.items()):
     argparser.add_argument(info['shortopt'], '--'+k.lower().replace('_','-'), dest=k, metavar=info['metavar'],
                         default=None, help=info['help'])
 
-argparser.add_argument('--show-conf', dest='show', action='store_true',
-                    help='Show current configuration and exit')
-
-subparsers = argparser.add_subparsers(dest='subcmd')
+subparsers = argparser.add_subparsers(title='subcommands', dest='subcmd')
 subparsers.add_parser('help', help='show this help message and exit')
 
 subcommands = [
@@ -107,7 +104,9 @@ for (k, info) in sorted(relevant_env.items()):
     os.environ[k] = value
     if args.subcmd=='help':
         print("{}: {} (by {})".format(k, value, origin))
-if args.subcmd=='help': exit(0)
+if args.subcmd=='help': 
+    print("")
+    exit(0)
     
 run('know-'+args.subcmd, subarglist)
 
