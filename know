@@ -70,6 +70,7 @@ subcommands = [
     ('merge', 'merge two graphs in the endpoint'),
     ('query', 'query the endpoint'),
     ('query-template', 'create a template of a SPARQL query'),
+    ('rm', 'delete a graph from the endpoint'),
     ('save', 'write a graph from the endpoint to a file'),
     ('search', 'search the semantic web'),
     ('uuid', 'generate a urn:uuid URI')

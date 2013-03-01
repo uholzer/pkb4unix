@@ -48,6 +48,28 @@ def put_data(data, identifier, contentType):
         print("\n".join(["{}: {}".format(*h) for h in headers]), file=sys.stderr)
         print("", file=sys.stderr)
         print(response.read().decode("UTF-8"), file=sys.stderr)
+    else:
+        response.read()
+    connection.close()
+    return status
+
+def delete_graph(identifier):
+    import http.client
+    parsedURL = urllib.parse.urlparse(UPDATE_URL)
+    connType = { "http": http.client.HTTPConnection, "https": http.client.HTTPSConnection }[parsedURL.scheme]
+    connection = connType(parsedURL.hostname, port=parsedURL.port)
+    url = "{}?graph={}".format(INDIRECT_GRAPH_STORE, urllib.parse.quote_plus(identifier))
+    connection.request("DELETE", url)
+    response = connection.getresponse()
+    headers = response.getheaders()
+    status = response.status
+    if not (200 <= status < 300):
+        print("DELETE failed with status {}:".format(status), file=sys.stderr)
+        print("\n".join(["{}: {}".format(*h) for h in headers]), file=sys.stderr)
+        print("", file=sys.stderr)
+        print(response.read().decode("UTF-8"), file=sys.stderr)
+    else:
+        response.read()
     connection.close()
     return status
 

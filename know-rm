@@ -1,0 +1,24 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import urllib
+import argparse
+
+import Basics
+
+argparser = argparse.ArgumentParser(
+    description="Remove graph from the SPARQL endpoint",
+    epilog="Note that no error is reported when the graph doesn't exist."
+)
+argparser.add_argument('graphs', nargs='+', metavar='URI',
+                    help=('Graphs to drop'))
+
+args = argparser.parse_args()
+
+args.graphs = [Basics.absurl(g) for g in args.graphs]
+
+for uri in args.graphs:
+    print("Removing {} ...".format(uri))
+    Basics.delete_graph(uri)
+
