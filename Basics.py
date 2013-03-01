@@ -32,19 +32,19 @@ def absurl(url, base=None):
 def guessContentType(url):
     return contentTypes[url.rsplit(".", 1)[-1]]
 
-def put_data(data, identifier, contentType):
+def put_data(data, identifier, contentType, keep_existing=False):
     """data can be an open file, an iterable (since Python 3.2), a bytes or a string object"""
     import http.client
     parsedURL = urllib.parse.urlparse(UPDATE_URL)
     connType = { "http": http.client.HTTPConnection, "https": http.client.HTTPSConnection }[parsedURL.scheme]
     connection = connType(parsedURL.hostname, port=parsedURL.port)
     url = "{}?graph={}".format(INDIRECT_GRAPH_STORE, urllib.parse.quote_plus(identifier))
-    connection.request("PUT", url, body=data, headers={ 'Content-type': contentType })
+    connection.request("POST" if keep_existing else "PUT", url, body=data, headers={ 'Content-type': contentType })
     response = connection.getresponse()
     headers = response.getheaders()
     status = response.status
     if not (200 <= status < 300):
-        print("PUT failed with status {}:".format(status), file=sys.stderr)
+        print("{} failed with status {}:".format("POST" if keep_existing else "PUT", status), file=sys.stderr)
         print("\n".join(["{}: {}".format(*h) for h in headers]), file=sys.stderr)
         print("", file=sys.stderr)
         print(response.read().decode("UTF-8"), file=sys.stderr)

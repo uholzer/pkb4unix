@@ -19,6 +19,8 @@ argparser.add_argument('-i', '--identifier', nargs='+', metavar='URI', dest='ide
                     help='Override graph name. Must be used when reading from STDIN. If used, the number of identifiers must match the number of file arguments.')
 argparser.add_argument('-t', '--content-type', nargs='+', dest='contentTypes', metavar='TYPE',
                     help='Override guessing of the correct Content-type. Defaults to application/rdf+xml when reading from STDIN. If used, the number of content-types must be one or match the number of file arguments.')
+argparser.add_argument('--incorporate', dest='incorporate', action='store_true',
+                    help='Keep already existing triples of the graphs on the SPARQL endpoint')
 
 args = argparser.parse_args()
 
@@ -30,7 +32,8 @@ if '-' in args.files:
 if args.identifiers and not (len(args.identifiers) == len(args.files)):
     print("--indentifier must have as many arguments as there are files to load")
 elif not args.identifiers:
-    args.identifiers = [Basics.absurl(filename) for filename in args.files]
+    args.identifiers = args.files
+args.identifiers = [Basics.absurl(filename) for filename in args.identifiers]
 
 if args.contentTypes and not (len(args.contentTypes) == len(args.files)):
     if len(args.contentTypes) == 1:
@@ -48,7 +51,7 @@ for (filename, uri, contentType) in zip(args.files, args.identifiers, args.conte
         f = sys.stdin.buffer.read()
     else:
         f = open(filename, mode="br")
-    Basics.put_data(f, uri, contentType)
+    Basics.put_data(f, uri, contentType, keep_existing=args.incorporate)
     if not filename == '-':
         f.close()
 
