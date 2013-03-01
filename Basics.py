@@ -3,11 +3,12 @@ import os
 import urllib
 import sys
 
-QUERY_URL = "http://localhost:8080/openrdf-sesame/repositories/pkb"
-UPDATE_URL = "http://localhost:8080/openrdf-sesame/repositories/pkb/statements"
-INDIRECT_GRAPH_STORE = "http://localhost:8080/openrdf-sesame/repositories/pkb/rdf-graphs/service"
-PROVENANCE = "kb:provenance"
-USER_NAMESPACES = "kb:namespaces"
+ENDPOINT_QUERY = os.environ["KNOW_ENDPOINT_QUERY"]
+ENDPOINT_UPDATE = os.environ["KNOW_ENDPOINT_UPDATE"]
+ENDPOINT_INDIRECT = os.environ["KNOW_ENDPOINT_INDIRECT"]
+PROVENANCE_GRAPH = os.environ["KNOW_PROVENANCE_GRAPH"]
+NS_GRAPH = os.environ["KNOW_NS_GRAPH"]
+PATH = os.environ["KNOW_PATH"]
 
 NS_KB = rdflib.Namespace("http://www.andonyar.com/rec/2012/pkb/conf#")
 
@@ -35,10 +36,10 @@ def guessContentType(url):
 def put_data(data, identifier, contentType, keep_existing=False):
     """data can be an open file, an iterable (since Python 3.2), a bytes or a string object"""
     import http.client
-    parsedURL = urllib.parse.urlparse(UPDATE_URL)
+    parsedURL = urllib.parse.urlparse(ENDPOINT_UPDATE)
     connType = { "http": http.client.HTTPConnection, "https": http.client.HTTPSConnection }[parsedURL.scheme]
     connection = connType(parsedURL.hostname, port=parsedURL.port)
-    url = "{}?graph={}".format(INDIRECT_GRAPH_STORE, urllib.parse.quote_plus(identifier))
+    url = "{}?graph={}".format(ENDPOINT_INDIRECT, urllib.parse.quote_plus(identifier))
     connection.request("POST" if keep_existing else "PUT", url, body=data, headers={ 'Content-type': contentType })
     response = connection.getresponse()
     headers = response.getheaders()
@@ -55,10 +56,10 @@ def put_data(data, identifier, contentType, keep_existing=False):
 
 def delete_graph(identifier):
     import http.client
-    parsedURL = urllib.parse.urlparse(UPDATE_URL)
+    parsedURL = urllib.parse.urlparse(ENDPOINT_UPDATE)
     connType = { "http": http.client.HTTPConnection, "https": http.client.HTTPSConnection }[parsedURL.scheme]
     connection = connType(parsedURL.hostname, port=parsedURL.port)
-    url = "{}?graph={}".format(INDIRECT_GRAPH_STORE, urllib.parse.quote_plus(identifier))
+    url = "{}?graph={}".format(ENDPOINT_INDIRECT, urllib.parse.quote_plus(identifier))
     connection.request("DELETE", url)
     response = connection.getresponse()
     headers = response.getheaders()
@@ -76,10 +77,10 @@ def delete_graph(identifier):
 def get_data(identifier, contentType):
     """data can be an open file, an iterable (since Python 3.2), a bytes or a string object"""
     import http.client
-    parsedURL = urllib.parse.urlparse(UPDATE_URL)
+    parsedURL = urllib.parse.urlparse(ENDPOINT_UPDATE)
     connType = { "http": http.client.HTTPConnection, "https": http.client.HTTPSConnection }[parsedURL.scheme]
     connection = connType(parsedURL.hostname, port=parsedURL.port)
-    url = "{}?graph={}".format(INDIRECT_GRAPH_STORE, urllib.parse.quote_plus(identifier))
+    url = "{}?graph={}".format(ENDPOINT_INDIRECT, urllib.parse.quote_plus(identifier))
     connection.request("GET", url, headers={ 'Accept': contentType })
     return HTTPSPARQLResponse(connection)
 
