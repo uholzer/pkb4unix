@@ -24,9 +24,17 @@ def fileurl2path(url):
     return urllib.request.url2pathname(url.path)
 
 def absurl(url, base=None):
+    """Makes an absolute URL from a relative
+
+    In order to make it possible to also use filenames as url, it gets
+    quoted first. Only characters not allowed in URLs are quoted. This
+    means that certain filenames (those with : or % in their name)
+    will not be treated the right way. The reason for this behaviour
+    is that an URI like urn:uuid:something could really be a filename
+    but is also an absolute URI and has to be interpreted as such."""
     base = base if base else os.path.abspath(".")
     base = "file://" + urllib.request.pathname2url(base)
-    url = urllib.parse.quote(url)
+    url = urllib.parse.quote_plus(url, safe='/:%')
     if base[-1] != "/": base += "/"
     return urllib.parse.urljoin(base, url)
 
