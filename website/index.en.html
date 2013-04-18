@@ -12,7 +12,156 @@
 
 <h1>A Personal Knowledge Base</h1>
 
-<p>Read the <a href="blog">blog</a></p>
+<h2>What this is all about and Motivation</h2>
+
+<p>The following things happened several times to me:</p>
+<ul>
+<li>I rember having read something on some website but can't find it
+anymore. This is especially embarassing when a friend is watching and
+Google just does not want to return the right result.</li>
+<li>I visit a website and consider it worthy to visit again later. But
+where should I put a note so I find it again later?</li>
+<li>For a thesis I have to work with several papers. Of course, I store the
+metadata as BiBTeX. Such papers often come in handy in other
+situations, therefore it would be useful to manage the metadata
+centrally and searchable.</li>
+<li>I discover some piece of software for a certain task. Next time I
+need to perform a similar task, I want to remember what software I
+chose.</li>
+<li>I find a solution for some problem which turns up seldomly. I want
+to be able to look up this solution whenever I encounter a similar
+problem. Or stated the other way: Given a problem, I want to be able
+to look up whether I already solved it in the past.</li>
+</ul>
+<p>These events all sound like they should be solvable with currently
+available software. Maybe so, but I am the kind of person who
+wants to build his own tailored solution.</p>
+<p>Let us look at the
+requirements: The data I want to store is
+manifold. I have problems, solutions, tasks, websites, papers and
+topics. Furthermore, I will likely be tempted to introduce more and
+more properties for all of them. Take papers as an example. There are
+many BiBTeX properties: authors, publisher, date, journal (issue, page
+and so on), title, URL, DOI. The list is virtually open ended. Also
+one is tempted to add more properties, for example one which says in
+which way the paper has been useful in the past. The things I
+want to add to my knowledge base should have relations between each
+other: A paper is related to a topic and an author. An author is
+related to her email address and her university. A solution is related
+to the problem it solves. I want to be able to build the knowledge
+base gradually and introduce new concepts and properties when
+needed.</p>
+<p>Clearly, it is very difficult to do all this using relational
+databases. Sematic Web enthusiasts already know what the right thing
+is in this case. I will build upon Semantic Web standards and plug
+together readily available software. Also, I hope to benefit from
+integration with the Semantic Web, for example, metadata about 
+papers is provided by many publishers in RDF, so I don't need to enter
+that data myself.</p>
+<p>This page is organized as a blog. I will report here from time to
+time how my knowledge base evolves. Everything mentioned above will be
+fleshed out and I will show how it works in practise.</p>
+
+<h2>Following the UNIX Philosophy</h2>
+
+<p>The requirements for my knowledge base are not very clear yet. In
+fact, I have to explicitely allow them to change over time. Because of
+this, it is important to stick to the UNIX philosophy. Among its
+principles are <q>Separate mechanism from policy</q>, <q>Write simple
+parts connected by clean interfaces</q>, <q>Fold knowledge into data,
+so program logic can be stupid and robust</q>, and <q>Prototype before
+polishing</q>. I will addhere to these principles like this:</p>
+
+<dl>
+<dt>Separate mechanism from policy</dt>
+<dd>I am going to use a SPAQRL endpoint to store and query the RDF
+data. Several libraries to handle RDF data and to create presentation
+from it are already available or will be developed by myself. This all
+implements the mechanism. The policy will be determined by the small
+tools I am going to write and how they will be configured.</dd>
+<dt>Write simple parts connected by clean interfaces</dt>
+<dd>My toolkit is going to be split up into the SPARQL endpoint and
+several small tools interacting with the SPARQL endpoint, acting as
+filters, or providing a GUI.</dd>
+<dt>Fold knowledge into data, so program logic can be stupid and robust</dt>
+<dd>In fact, a SPARQL endpoint is as stupid as it can get. It
+basically stores quadruples of meaningless identifiers and is able to
+query them equaly meaninglessly. Indeed, it has no knowledge what
+these identifiers mean. With a little luck, a SPARQL knows the 
+meaning of identifiers in the RDFS or OWL namespace and is able to do
+reasoning. Also, I will use a a library which presents RDF
+data in a human-digestable way. How these presentations look like will
+also be described in RDF. So, program logic will really be stupid.</dd>
+<dt>Prototype before polishing</dt>
+<dd>I am going to use Python, which is an excellent language for
+prototyping. Efficiency will not be a concern for the beginning, since
+this is a <em>personal</em> knowledge base which will likely not need
+to handle a huge flood of data.</dd>
+</dl>
+
+<h2>A SPARQL Endpoint</h2>
+
+<p>This time, I'll install a SPARQL edpoint. I decided myself for
+<a href="http://www.openrdf.org/">Sesame 2.7.0-beta2</a>.</p>
+
+<p><a href="http://www.openrdf.org/doc/sesame2/users/ch06.html#section-sesame-server-installation">
+Installation Instructions</a> can be found in Sesame's documentation.
+Sesame is a Java application and needs a Servelt container in order
+to be run as a SPARQL endpoint. I'll use Tomcat from my Debian
+distribution found in the package <code>tomcat7-user</code>. This
+package is special in that it allows a user to easily setup and run
+Tomcat on his machine for testing purposes. Setting up a
+<a href="http://tomcat.apache.org/">tomcat</a> instance is very
+easy:</p>
+
+<pre>
+urs@speedy:~/p/knowledge$ tomcat7-instance-create --help
+Usage: tomcat7-instance-create [options] &lt;directoryname&gt;
+  directoryname: name of the tomcat instance directory to create
+Options:
+  -h, --help       Display this help message
+  -p httpport      HTTP port to be used by Tomcat (default is 8080)
+  -c controlport   Server shutdown control port (default is 8005)
+  -w magicword     Word to send to trigger shutdown (default is SHUTDOWN)
+urs@speedy:~/p/knowledge$ tomcat7-instance-create tomcat-instance
+You are about to create a Tomcat instance in directory 'tomcat-instance'
+nc: unable to connect to address localhost, service 8080
+nc: unable to connect to address localhost, service 8005
+* New Tomcat instance created in tomcat-instance
+* You might want to edit default configuration in tomcat-instance/conf
+* Run tomcat-instance/bin/startup.sh to start your Tomcat instance
+</pre>
+
+<p>Unpacking Sesame reveals two war files, one for the Sesame itself
+and one for the Sesame Workbench. These must be dropped into Tomcat's
+<code>webapps</code> directory.</p>
+
+<pre>
+urs@speedy:~/p/knowledge$ cd sesame/
+urs@speedy:~/p/knowledge/sesame$ tar -xzf openrdf-sesame-2.7.0-beta2-sdk.tar.gz
+urs@speedy:~/p/knowledge/sesame$ ls openrdf-sesame-2.7.0-beta2/war/
+openrdf-sesame.war  openrdf-workbench.war
+urs@speedy:~/p/knowledge/sesame$ cd ..
+urs@speedy:~/p/knowledge$ cp sesame/openrdf-sesame-2.7.0-beta2/war/* tomcat-instance/webapps/
+</pre>
+
+<p>This does the trick. Starting and stopping tomcat is easy with 
+<code>./tomcat-instance/bin/startup.sh</code> and
+<code>./tomcat-instance/bin/shutdown.sh</code>.
+Note that Sesame's data is stored in <code>~/.aduna/</code>.
+After starting,
+Sesame's Workbench can be accessed via
+<a href="http://localhost:8080/openrdf-workbench/">http://localhost:8080/openrdf-workbench/</a>
+and the server is at
+<a href="http://localhost:8080/openrdf-sesame">http://localhost:8080/openrdf-sesame</a>.
+Using the workbench, one can create new repositories. For my Personal
+Knowledge Base I create one of type <code>Native Java Store RDF
+Schema</code> with ID <code>pkb</code> and title <code>Personal
+Knowledge Base</code>.</p>
+
+<p>Using the workbench, one can load and query graphs easily. It is
+useful when doing simple things, but for complex things, I will have
+to write my own tools.</p>
 
 </body>
 </html>

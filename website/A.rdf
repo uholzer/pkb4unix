@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:dc="http://purl.org/dc/elements/1.1/"
+         xmlns:dcterms="http://purl.org/dc/terms/"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:recpub="http://www.andonyar.com/rec/2007-01/aspec/recpub#">
+
+  <rdf:Description rdf:about="http://www.andonyar.com/rec/2012/pkb/">
+    <rdf:type rdf:resource="http://www.andonyar.com/rec/2007-01/aspec/recpub#RecPub"/>
+    <recpub:aspec rdf:resource="http://www.andonyar.com/rec/2007-01/aspec/rec2"/>
+
+    <recpub:licenseCategory rdf:resource="http://www.andonyar.com/rec/2007-01/aspec/recpub#LicenseFree"/>
+    <dcterms:rightsHolder rdf:resource="http://u.andonyar.com/people/UrsHolzer"/>
+    <dcterms:dateCopyrighted rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2013-04-18</dcterms:dateCopyrighted>
+
+    <!-- Information about the author, administrator and so on -->
+    <dcterms:creator>
+        <foaf:Person rdf:about="http://u.andonyar.com/people/UrsHolzer">
+            <foaf:name>Urs Holzer</foaf:name>
+        </foaf:Person>
+    </dcterms:creator>
+
+    <!-- Further information on the content of the resource -->
+    <dcterms:title xml:lang="en">My personal knowledge base</dcterms:title>
+
+    <dcterms:subject rdf:resource="http://dbpedia.org/resource/Personal_knowledge_base"/>
+    <dcterms:subject rdf:resource="http://dbpedia.org/resource/Semantic_Web"/>
+    <!-- date issues and updates -->
+    <dcterms:created rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2012-12-24</dcterms:created>
+    <dcterms:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2013-04-18</dcterms:modified>
+
+  </rdf:Description>
+
+</rdf:RDF>
