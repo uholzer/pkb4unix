@@ -1,0 +1,24 @@
+pkb4unix - A personal knowledge base using RDF and SPARQL
+           following the UNIX philosophy
+
+For more information see
+
+    http://www.andonyar.com/rec/2012/pkb/
+
+Requirements:
+- Python 3
+- A recent version of RDFLib <https://github.com/RDFLib>
+- A SPARQL endpoint
+- A Unix-like operating system (tested on Linux only)
+
+License:
+    pkb4unix is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
