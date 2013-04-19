@@ -3,7 +3,9 @@
          xmlns:dc="http://purl.org/dc/elements/1.1/"
          xmlns:dcterms="http://purl.org/dc/terms/"
          xmlns:foaf="http://xmlns.com/foaf/0.1/"
-         xmlns:recpub="http://www.andonyar.com/rec/2007-01/aspec/recpub#">
+         xmlns:recpub="http://www.andonyar.com/rec/2007-01/aspec/recpub#"
+         xmlns:doap="http://usefulinc.com/ns/doap#"
+         xmlns:progress="http://www.andonyar.com/rec/2008-12/progress/voc#">
 
   <rdf:Description rdf:about="http://www.andonyar.com/rec/2012/pkb/">
     <rdf:type rdf:resource="http://www.andonyar.com/rec/2007-01/aspec/recpub#RecPub"/>
@@ -30,5 +32,22 @@
     <dcterms:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2013-04-18</dcterms:modified>
 
   </rdf:Description>
+
+  <doap:Project rdf:about="http://www.andonyar.com/rec/2012/pkb/project">
+    <doap:name>pkb4unix</doap:name>
+    <doap:created>2012-12-24</doap:created>
+    <doap:shortdesc xml:lang="en">Tools to manage a personal knowledge base using RDF and SPARQL</doap:shortdesc>
+    <!--<doap:description xml:lang="en"></doap:description>-->
+    <doap:homepage rdf:resource="http://www.andonyar.com/rec/2012/pkb/" />
+    <doap:programming-language>Python</doap:programming-language>
+    <!--<license rdf:resource="http://usefulinc.com/doap/licenses/mit" />-->
+    <doap:maintainer rdf:resource="http://u.andonyar.com/people/UrsHolzer"/>
+    <doap:repository>
+        <doap:GitRepository>
+            <doap:location rdf:resource="https://github.com/uholzer/pkb4unix.git"/>
+        </doap:GitRepository>
+    </doap:repository>
+    <progress:progress>0.1</progress:progress>
+  </doap:Project>
 
 </rdf:RDF>
