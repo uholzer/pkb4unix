@@ -4,6 +4,8 @@ import argparse
 import sys
 import os
 
+KNOW_PATH = "/home/urs/p/knowledge/pkb4unix"
+
 def run(executable, args):
     os.execvp('{}/{}'.format(os.environ['KNOW_PATH'],executable), [executable] + args)
 
@@ -46,7 +48,7 @@ relevant_env = {
     'KNOW_PATH': {
         'shortopt': '-E',
         'metavar': 'DIR',
-        'default': "/home/urs/p/knowledge/knowbase",
+        'default': KNOW_PATH,
         'help': "Location of executables"
     }
 }
