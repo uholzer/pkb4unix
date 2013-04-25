@@ -5,20 +5,50 @@ For more information see
 
     http://www.andonyar.com/rec/2012/pkb/
 
-Requirements:
+=== Requirements ===
+
 - Python 3
 - A recent version of RDFLib <https://github.com/RDFLib>
 - A SPARQL endpoint
 - A Unix-like operating system (tested on Linux only)
 
-License:
-    pkb4unix is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+=== Setup ===
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+First open the file "know" and change at the top the value of the
+variable KNOW_PATH to the directory where the files know-* reside:
+
+    KNOW_PATH = "/path/to/know/executables"
+
+Also, you will need a SPARQL endpoint. You can use any SPARQL server
+that supports SPARQL 1.1 Query, Update, and the HTTP Graph Store
+protocol. pkb4unix is tested with Sesame <http://www.openrdf.org/>.
+
+=== Environment Variables ===
+
+The scripts know-* need a few environment variables to be set.
+You are advised to run the scripts through the wapper `know`. It will
+set the environment variables to their defaults if not already
+present.
+
+=== Usage ===
+
+Find out what commands are available:
+
+    know help
+
+Read the help of a command:
+
+    know <command> --help
+
+=== License ===
+
+pkb4unix is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
