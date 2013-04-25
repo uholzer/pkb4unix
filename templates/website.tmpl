@@ -1,0 +1,26 @@
+NS enctr: http://www.andonyar.com/rec/2012/pkb/encounter#
+NS people: http://u.andonyar.com/people/
+NS dct: http://purl.org/dc/terms/
+NS foaf: http://xmlns.com/foaf/0.1/
+
+[website] ?website A website you visited
+
+LITERAL  1 ?title   Title of the website
+RESOURCE * ?subject subject
+RESOURCE * ?author  [foaf:Person] Author of the website
+
+INSERT {
+    people:UrsHolzer enctr:encountered ?website .
+    ?website dct:title ?title .
+    ?website dct:subject ?subject .
+}
+
+[foaf:Person] ?person a person
+
+LITERAL 1 ?name Name
+
+INSERT {
+    ?person a foaf:Person .
+    ?person foaf:name ?name .
+}
+

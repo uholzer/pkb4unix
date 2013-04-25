@@ -3,11 +3,97 @@
 import argparse
 import sys
 import subprocess
+import re
 
 from rdflib import Graph, Literal, BNode, URIRef
 from rdflib_sparql.processor import processUpdate
 
-argparser = argparse.ArgumentParser(description='Construct a graph based on a template or RDF schema')
+argparser = argparse.ArgumentParser(
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description='Construct a graph based on a template or RDF schema',
+    epilog='''
+== Template language ==
+
+Values:
+
+<prefix>   a namespace prefix. Syntax as in SPARQL
+<count>    number of instances to be assigned to a variable.
+           This can be an integer for a fixed count, * for any
+           number >= 0 and + for any number > 0.
+<variable> A SPARQL variable name including the inition ? or $.
+<class>    Normally rdfs:class. If it does not contain a ":", then
+           it is considered a name not corresponding to a class.
+           Usually, a section with the same class should also be
+           present.
+<prompt>   Shown to the user when she's to fill in the value. It is
+           optional and may contain whitespaces, since its always at
+           the end of an instruction.
+
+Sections:
+
+A section is introduced with a line
+[<class>] <variable> <prompt>
+Except namespace declarations, everything must be inside a section.
+The first section of a template file is used at the beginning. The
+user is asked for the <variable> by showing <prompt>.
+
+Instructions:
+
+NS <prefix> <namespace>
+    Declares the namespace <namespace> with prefix <prefix>
+
+NODE <count> <variable> <prompt>
+    Declares <variable> to be any node. <prompt> is shown to
+    the user to set the variable.
+
+LITERAL <count> <variable> <prompt>
+    Declares <variable> to be a literal. <prompt> is shown to the user
+    in order to determine the value.
+
+RESOURCE <count> <variable> [<class>] <prompt>
+    Declares <variable> to ba a resource. [<class>] is optional. If
+    given, the user has the option to just provide an URI or to create
+    the resource according to the template given in the
+    [<class>]-section should such a section exist. [<class>] <prompt>
+    are both shown to the user.
+    Hint: Provide [<class>] if a resource is supposed to be of a
+    certain rdfs:Class, even if you don't provide a corresponding section.
+
+BNODE <count> <variable> [<class>] <prompt>
+    Assigns a fresh blank node the the variable. If [<class>] is given
+    and a corresponding section exists, the user is given the choice
+    to construct information about the blank node according to the
+    section.
+
+INSERT {
+    <quads>
+}
+    Lists the tripples to be inserted into the graph. The syntax of
+    <quads> is the same as Quads in the SPARQL syntax.
+
+Example:
+
+    NS wf: http://www.w3.org/2005/01/wf/flow#
+
+    [wf:Open] ?task An open task
+
+    RESOURCE 1 ?tracker [wf:Tracker] tracked by
+
+    INSERT {
+        ?task a wf:Open .
+        ?task wf:tracker ?tracker .
+    }
+
+    [wf:Tracker] ?tracker Tracker
+
+    LITERAL 1 ?description Description
+
+    INSERT {
+        ?tracker a wf:Tracker .
+        ?tracker wf:description ?description .
+    }
+'''
+)
 argparser.add_argument('template', nargs='?',
                     help='Construct according to template given in FILE')
 argparser.add_argument('-o', '--output', metavar='FILE', dest='outfile', nargs=1,
@@ -16,17 +102,6 @@ argparser.add_argument('-c', '--class', dest='class', metavar='CLASS',
                     help='Construct instance of this RDFS class (not yet implemented, can not be used together with -t)')
 
 args = argparser.parse_args()
-
-if args.outfile:
-    dest = open(args.outfile, mode='wb')
-else:
-    dest = sys.stdout.buffer
-
-sys.stdout = sys.stderr
-
-g = Graph()
-variables = dict()
-ns = dict()
 
 print("""Available commands:
 ! CMD
@@ -40,105 +115,254 @@ print("""Available commands:
 class TemplateError(Exception):
     pass
 
-def do_ns(l):
-    (_, prefix, namespace) = l.split(None, 2)
-    namespace = namespace.strip()
-    print("PREFIX {}: <{}>".format(prefix, namespace), file=sys.stderr)
-    ns[prefix] = URIRef(namespace)
+class NotPName(Exception):
+    pass
 
-def do_ask(l):
-    (_, nodetype, varname, descr) = l.split(None, 3)
-    descr = descr.strip()
-    print("{} ({}):".format(varname, descr), file=sys.stderr)
-    if not nodetype in ('Literal', 'URI'): raise TemplateError("Bad nodetype")
+class PrefixNotFound(Exception):
+    pass
 
-    # use existing value
-    oldvalue = ''
-    if varname in variables:
-        if isinstance(variables[varname], URIRef) and nodetype=='URI':
-            oldvalue = variables[varname]
-            print("[{}]".format(str(oldvalue)), file=sys.stderr)
-        elif isinstance(variables[varname], Literal) and nodetype=='Literal':
-            oldvalue = variables[varname]
-            print("[{}]".format(str(oldvalue)), file=sys.stderr)
-
-    value = input("{}> ".format(nodetype))
-    if value:
-        if value[0] == '@':
-            value = '| ./know-edit --null'
-        if value[0] == '!':
-            subprocess.call(value[1:], shell=True, stdout=sys.stderr)
-            return do_ask(l) # start over
-        elif value[0] == '|':
+class Section():
+    def __init__(self):
+        self.name = ""
+        self.quads = ""
+        self.mainvariable = None
+        self.variables = list()
+        self.ns = dict()
+        self.expand_re = re.compile(r"^([^\s]*):([^\s]*)$")
+        
+    def expand(self, shortname):
+        match = self.expand_re.match(shortname)
+        if match:
+            prefix = match.group(1)
+            localname = match.group(2)
             try:
-                value = subprocess.check_output(value[1:], shell=True)
-            except (subprocess.CalledProcessError):
-                print("Your shell command failed, try again!", file=sys.stderr)
-                return do_ask_(l)
-    else:
-        value = oldvalue
-    if nodetype=='URI': value = URIRef(value)
-    if nodetype=='Literal': value = Literal(value)
-    variables[varname] = value
+                return self.ns[prefix] + localname
+            except KeyError:
+                raise PrefixNotFound()
+        else:
+            raise NotPName()
 
-def do_query(q):
-    raise NotImplementedError()
+    def construct(self, g, sections, mainvar_value=None):
+        print("", file=sys.stderr)
+        print("=== {}".format(self.name), file=sys.stderr)
+        bindings = dict()
+        q = "INSERT {{\n{}}} WHERE {{ }}".format(self.quads)
 
-def do_update(q):
-    processUpdate(g, q,
-        initNs=ns,
-        initBindings=variables
-    )
+        print("I will insert triples with this SPARQL query:\n"+q, file=sys.stderr)
 
-def do_batch(commands):
-    commands = iter(commands)
-    while True:
-        try:
-            c = next(commands)
-        except StopIteration:
-            break
-        try:
-            if c.startswith("<QUERY>"):
-                query = ""
-                while True:
-                    l = next(commands)
-                    if l.startswith("</QUERY>"): break
-                    query += l
-                do_query(query)
-            elif c.startswith("<UPDATE>"):
-                update = ""
-                while True:
-                    l = next(commands)
-                    if l.startswith("</UPDATE>"): break
-                    update += l
-                do_update(update)
-            elif c.startswith("<LOOP>"):
-                loop = list()
-                while True:
-                    l = next(commands)
-                    if l.startswith("</LOOP>"): break
-                    loop.append(l)
-                while input("{} [y/n]>".format(c[6:].strip())).strip()=='y':
-                    do_batch(iter(loop))
-            elif c.startswith("ASK"):
-                do_ask(c)
-            elif c.startswith("NS"):
-                do_ns(c)
-            elif c.startswith("#"):
-                pass
-            elif c=='' or c.isspace():
-                pass
+        if not mainvar_value:
+            mainvar_value = self.input("CONSTRUCTING {}> ".format(self.mainvariable["prompt"]))
+            mainvar_value = URIRef(mainvar_value)
+            bindings[self.mainvariable["name"]] = mainvar_value
+        else:
+            bindings[self.mainvariable["name"]] = mainvar_value
+            
+        for var in self.variables:
+            askfunc = getattr(self, "ask_" + var["nodetype"])
+            val = askfunc(g, sections, var)
+            bindings[var["name"]] = val
+
+        processUpdate(g, q,
+            initNs=self.ns,
+            initBindings=bindings
+        )
+
+        print("=== {}".format("done"), file=sys.stderr)
+        print("", file=sys.stderr)
+
+        return mainvar_value
+
+    def ask_NODE(self, g, sections, var):
+        raise NotImplemented()
+
+    def ask_RESOURCE(self, g, sections, var):
+        if var["classhint"] and var["classhint"] in sections:
+            answer = self.input("RESOURCE (c to construct) {}> ".format(var["prompt"]))
+            if answer == "c":
+                s = sections[var["classhint"]]
+                node = s.construct(g, sections, None)
+                print("back to {}".format(self.name), file=sys.stderr)
+                return node
             else:
-                TemplateError("Bad line: {}".format(c))
-        except StopIteration:
-            raise TemplateError("Unexpected EOF")
+                return URIRef(answer)
+        else:
+            answer = self.input("RESOURCE {}> ".format(var["prompt"]))
+            return URIRef(answer)
 
+    def ask_LITERAL(self, g, sections, var):
+        answer = self.input("LITERAL {}> ".format(var["prompt"]))
+        return URIRef(answer)
+
+    def ask_BNODE(self, g, sections, var):
+        # In order to implement casshints and construction,
+        # one would create a blank node and then call
+        # section.construct(g, sections, theNewBNode)
+        print("{} ({}):".format(varname, descr), file=sys.stderr)
+        answer = self.input("BNODE {}> {}, please confirm".format(var["prompt"]))
+        return BNode()
+
+    def input(self, prompt):
+        value = input(prompt)
+        if value:
+            if value[0] == '@':
+                value = '| ./know-edit --null'
+            if value[0] == '!':
+                subprocess.call(value[1:], shell=True, stdout=sys.stderr)
+                return self.input(prompt) # start over
+            elif value[0] == '|':
+                try:
+                    value = subprocess.check_output(value[1:], shell=True)
+                except (subprocess.CalledProcessError):
+                    print("Your shell command failed, try again!", file=sys.stderr)
+                    return self.input(prompt)
+        return value
+
+class Parser:
+    def __init__(self):
+        self.classhint_re = re.compile(r"^\[([^\]]*)\]")
+        self.globalns = dict()
+        self.sections = dict()
+
+    def parse(self, lineiter):
+        current_section = None
+        first_section = None
+        # Preamble
+        while True:
+            try:
+                line = next(lineiter)
+            except StopIteration:
+                raise TemplateError("Tempalte contains no section")
+            line = line.strip()
+            if line=="" or line[0] == '#':
+                pass
+            elif line[0] == '[':
+                current_section = self.startSection(line)
+                first_section = current_section
+                break
+            elif line.split(None, 1)[0] == 'NS':
+                self.really_parse_NS(self.globalns, line)
+            else:
+                raise TemplateError("Only NS declarations allowed in the preamble")
+        # Sections
+        while True:
+            try:
+                line = next(lineiter)
+            except StopIteration:
+                break
+            line = line.strip()
+            if line=="" or line[0] == '#':
+                pass
+            elif line[0] == '[':
+                current_section = self.startSection(line)
+            else:
+                instruction = line.split(None, 1)[0]
+                try:
+                    pfunc = getattr(self, "parse_" + instruction)
+                except AttributeError:
+                    raise TemplateError("Unknown instruction '{}'".format(instruction))
+                pfunc(current_section, line, lineiter)
+            
+        return (self.sections, first_section)
+
+    def really_parse_NS(self, ns, argline):
+        args = argline.split(None, 2)
+        if not args[1][-1] == ':':
+            raise TemplateError("Prefix must end in :")
+        ns[args[1][0:-1]] = args[2]
+
+    def parse_NS(self, section, argline, lineiter):
+        self.really_parse_NS(section.ns, argline)
+        
+    def parse_NODE(self, section, argline, lineiter):
+        args = argline.split(None, 3)
+        section.variables.append({
+            "nodetype": args[0],
+            "count": self.count(args[1]),
+            "name": self.variable(args[2]),
+            "classhint": self.classhint(section, args[0], args[3]),
+            "prompt": args[3]
+        })
+
+    parse_RESOURCE = parse_NODE
+    parse_LITERAL = parse_NODE
+    parse_BNODE = parse_NODE
+
+    def parse_INSERT(self, section, argline, lineiter):
+        if not argline.split(None, 1) == ["INSERT", "{"]:
+            raise
+        quads = ""
+        try:
+            line = next(lineiter)
+            while line.rstrip() != '}': # } must be at beginning of line
+                quads += line
+                line = next(lineiter)
+        except StopIteration:
+            raise TemplateError("INSERT block not closed at EOF")
+        section.quads = quads
+
+    def startSection(self, line):
+        section = Section()
+        section.ns = dict(self.globalns) # Include globally defined namespaces
+        args = line.split(None, 2)
+        c = self.classhint(section, "RESOURCE", args[0])
+        if not c:
+            raise TemplateError("Invalid Syntax in section start")
+        section.name = c
+        self.sections[c] = section
+
+        section.mainvariable = {
+            "nodetype": "RESOURCE",
+            "count": 1,
+            "name": self.variable(args[1]),
+            "classhint": c,
+            "prompt": args[2]
+        }
+        return section
+        
+
+    def count(self, s):
+        if s == '*':
+            return -2
+        elif s == '+':
+            return -1
+        else:
+            try:
+                int(s)
+            except:
+                raise TemplateError("Count expected")
+
+    def variable(self, s):
+        if s[0] == '?' or s[0] == '$':
+            return s
+        else:
+            raise TemplateError("Variable expected")
+
+    def classhint(self, section, nodetype, s):
+        match = self.classhint_re.search(s)
+        if match:
+            try:
+                return section.expand(match.group(1))
+            except NotPName:
+                return match.group(1)
+        else:
+            return None
+
+
+if args.outfile:
+    dest = open(args.outfile, mode='wb')
+else:
+    dest = sys.stdout.buffer
+
+sys.stdout = sys.stderr
+
+g = Graph()
+parser = Parser()
 
 template = open(args.template, mode='r')
+lineiter = iter(template.readline, '')
+(sections, firstsection) = parser.parse(lineiter)
 
-commands = iter(template.readline, '')
-
-do_batch(commands)
+firstsection.construct(g, sections)
 
 g.serialize(dest)
 

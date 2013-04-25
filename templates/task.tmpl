@@ -1,0 +1,20 @@
+NS wf: http://www.w3.org/2005/01/wf/flow#
+
+[wf:Open] ?task An open task
+
+RESOURCE 1 ?tracker [wf:Tracker] tracked by
+
+INSERT {
+    ?task a wf:Open .
+    ?task wf:tracker ?tracker .
+}
+
+[wf:Tracker] ?tracker Tracker
+
+LITERAL 1 ?description Description
+
+INSERT {
+    ?tracker a wf:Tracker .
+    ?tracker wf:description ?description .
+}
+
