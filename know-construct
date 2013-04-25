@@ -191,7 +191,7 @@ class Section():
 
     def ask_LITERAL(self, g, sections, var):
         answer = self.input("LITERAL {}> ".format(var["prompt"]))
-        return URIRef(answer)
+        return Literal(answer)
 
     def ask_BNODE(self, g, sections, var):
         # In order to implement casshints and construction,
