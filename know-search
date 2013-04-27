@@ -8,7 +8,7 @@ import http.client
 from subprocess import Popen, PIPE
 
 from rdflib import Graph, URIRef
-import Basics
+import PKB4Unix
 
 argparser = argparse.ArgumentParser(description='Search the Internet for Resources')
 argparser.add_argument('keyword',
@@ -34,7 +34,7 @@ def query_dbpedia():
         formatter_opts = '-f ignore verbatim ignore n'
     else:
         formatter_opts = '-f title t uri' + (' paragraph' if args.show_description else ' ignore') + ' n'
-    with Popen(["xsltproc dbpedia_api2csv.xsl - | ./know-format-csv " + formatter_opts], stdin=PIPE, shell=True) as proc:
+    with Popen(["xsltproc dbpedia_api2csv.xsl - | ./know-rdf-format-csv " + formatter_opts], stdin=PIPE, shell=True) as proc:
         for x in iter(lambda: response.read(4096), b''): proc.stdin.write(x)
 
 services = { "dbpedia": query_dbpedia }

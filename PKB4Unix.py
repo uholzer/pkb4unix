@@ -8,7 +8,6 @@ ENDPOINT_UPDATE = os.environ["KNOW_ENDPOINT_UPDATE"]
 ENDPOINT_INDIRECT = os.environ["KNOW_ENDPOINT_INDIRECT"]
 PROVENANCE_GRAPH = os.environ["KNOW_PROVENANCE_GRAPH"]
 NS_GRAPH = os.environ["KNOW_NS_GRAPH"]
-PATH = os.environ["KNOW_PATH"]
 
 NS_KB = rdflib.Namespace("http://www.andonyar.com/rec/2012/pkb/conf#")
 

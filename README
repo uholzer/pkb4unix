@@ -9,19 +9,22 @@ For more information see
 
 - Python 3
 - A recent version of RDFLib <https://github.com/RDFLib>
-- A SPARQL endpoint
+- A SPARQL 1.1 endpoint with support for updates and the graph
+  store HTTP protocol.
 - A Unix-like operating system (tested on Linux only)
 
 === Setup ===
 
-First open the file "know" and change at the top the value of the
-variable KNOW_PATH to the directory where the files know-* reside:
+Run
 
-    KNOW_PATH = "/path/to/know/executables"
+    python3 setup.py install
 
-Also, you will need a SPARQL endpoint. You can use any SPARQL server
-that supports SPARQL 1.1 Query, Update, and the HTTP Graph Store
-protocol. pkb4unix is tested with Sesame <http://www.openrdf.org/>.
+or if you want to install to your user directory
+
+    python3 setup.py install --user
+
+You can also test the scripts where they are. For this, add the
+directory to your PATH.
 
 === Environment Variables ===
 

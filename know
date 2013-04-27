@@ -4,10 +4,10 @@ import argparse
 import sys
 import os
 
-KNOW_PATH = "/home/urs/p/knowledge/pkb4unix"
+KNOW_PATH = None
 
 def run(executable, args):
-    os.execvp('{}/{}'.format(os.environ['KNOW_PATH'],executable), [executable] + args)
+    os.execvp(executable, [executable] + args)
 
 argparser = argparse.ArgumentParser(
     description='Knowledge Base Toolkit',
@@ -49,7 +49,7 @@ relevant_env = {
         'shortopt': '-E',
         'metavar': 'DIR',
         'default': KNOW_PATH,
-        'help': "Location of executables"
+        'help': "Location of executables (gets added to PATH)"
     }
 }
 
@@ -61,9 +61,6 @@ subparsers = argparser.add_subparsers(title='subcommands', dest='subcmd')
 subparsers.add_parser('help', help='show this help message and exit')
 
 subcommands = [
-    ('construct', 'construct a graph'),
-    ('edit', 'read from stdin, edit, print on stdout'),
-    ('format-csv', 'csv formatter'),
     ('graph', 'graph manipulations'),
     ('load', 'load a graph into the endpoint'),
     ('merge', 'merge two graphs in the endpoint'),
@@ -72,7 +69,10 @@ subcommands = [
     ('rm', 'delete a graph from the endpoint'),
     ('save', 'write a graph from the endpoint to a file'),
     ('search', 'search the semantic web'),
-    ('uuid', 'generate a urn:uuid URI')
+    ('rdf-construct', 'construct a graph'),
+    ('rdf-edit', 'read from stdin, edit, print on stdout'),
+    ('rdf-format-csv', 'csv formatter'),
+    ('rdf-uuid', 'generate a urn:uuid URI')
 ]
 
 for (cmd, desc) in subcommands:
@@ -103,13 +103,20 @@ for (k, info) in sorted(relevant_env.items()):
     else:
         value = info['default']
         origin = "default"
-    os.environ[k] = value
+    if value is not None:
+        os.environ[k] = value
     if args.subcmd=='help':
-        print("{}: {} (by {})".format(k, value, origin))
+        print("{}: {} (by {})".format(k, value if value is not None else "(not set)", origin))
 if args.subcmd=='help': 
     print("")
     exit(0)
     
+# Adding KNOW_PATH to front of PATH
+# The know-* scripts expect all know-* scripts to be in the path.
+# The function run above does so too.
+if "KNOW_PATH" in os.environ and not os.environ["PATH"].startswith(os.environ["KNOW_PATH"]+":"):
+    os.environ["PATH"] = "{}:{}".format(os.environ["KNOW_PATH"],os.environ["PATH"])
+
 run('know-'+args.subcmd, subarglist)
 
 

@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 from rdflib import Graph
-import Basics
+import PKB4Unix
 
-kb = Basics.kbConnect()
+kb = PKB4Unix.kbConnect()
 
 ctxts = { g.identifier for g in kb.contexts() }
 

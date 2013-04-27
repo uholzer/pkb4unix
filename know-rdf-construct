@@ -205,7 +205,7 @@ class Section():
         value = input(prompt)
         if value:
             if value[0] == '@':
-                value = '| ./know-edit --null'
+                value = '| ./know-rdf-edit --null'
             if value[0] == '!':
                 subprocess.call(value[1:], shell=True, stdout=sys.stderr)
                 return self.input(prompt) # start over

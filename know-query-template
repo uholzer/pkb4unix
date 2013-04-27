@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from rdflib import Graph
-import Basics
+import PKB4Unix
 
 argparser = argparse.ArgumentParser(description=('Generates a template '
             'for a SQPARQL query, including prefix declarations'))
@@ -13,9 +13,9 @@ argparser = argparse.ArgumentParser(description=('Generates a template '
 
 args = argparser.parse_args()
 
-kb = Basics.kbConnect()
+kb = PKB4Unix.kbConnect()
 
-nss = kb.query("SELECT DISTINCT ?prefix ?ns WHERE { ?ns kb:prefix ?prefix }", initNs={'kb': Basics.NS_KB})
+nss = kb.query("SELECT DISTINCT ?prefix ?ns WHERE { ?ns kb:prefix ?prefix }", initNs={'kb': PKB4Unix.NS_KB})
 
 for ns in nss:
     print("PREFIX {}: <{}>".format(*ns))

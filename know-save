@@ -6,7 +6,7 @@ import urllib
 import argparse
 
 from rdflib import Graph, URIRef
-import Basics
+import PKB4Unix
 
 argparser = argparse.ArgumentParser(description='Save a graph from a SPARQL endpoint to a file')
 argparser.add_argument('identifiers', nargs='+', metavar='URI',
@@ -19,12 +19,12 @@ argparser.add_argument('-t', '--content-type', nargs='+', dest='contentTypes', m
 
 args = argparser.parse_args()
 
-args.identifiers = [Basics.absurl(ident) for ident in args.identifiers]
+args.identifiers = [PKB4Unix.absurl(ident) for ident in args.identifiers]
 
 if args.files and not (len(args.files) == len(args.identifiers)):
     print("--file must have as many arguments as there are graphs to save")
 elif not args.files:
-    args.files = [Basics.fileurl2path(ident) for ident in args.identifiers]
+    args.files = [PKB4Unix.fileurl2path(ident) for ident in args.identifiers]
 
 if args.contentTypes and not (len(args.contentTypes) == len(args.identifiers)):
     if len(args.contentTypes) == 1:
@@ -32,7 +32,7 @@ if args.contentTypes and not (len(args.contentTypes) == len(args.identifiers)):
     else:
         print("--content-type must have one or as many arguments as there are graphs to save")
 elif not args.contentTypes:
-    args.contentTypes = [Basics.guessContentType(ident) for ident in args.identifiers]
+    args.contentTypes = [PKB4Unix.guessContentType(ident) for ident in args.identifiers]
 
 for (filename, uri, contentType) in zip(args.files, args.identifiers, args.contentTypes):
     print("Saving {} to {} ...".format(uri, "STDOUT" if filename == '-' else filename))
@@ -40,7 +40,7 @@ for (filename, uri, contentType) in zip(args.files, args.identifiers, args.conte
         f = sys.stdout.buffer
     else:
         f = open(filename, mode="bw")
-    with Basics.get_data(uri, contentType) as response:
+    with PKB4Unix.get_data(uri, contentType) as response:
         for s in iter(lambda: response.read(4096), b''):
             f.write(s)
 
