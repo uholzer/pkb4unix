@@ -98,8 +98,8 @@ argparser.add_argument('template', nargs='?',
                     help='Construct according to template given in FILE')
 argparser.add_argument('-o', '--output', metavar='FILE', dest='outfile', nargs=1,
                     help=('File the graph should be written to. If omitted, it will be written to STDOUT.'))
-argparser.add_argument('-c', '--class', dest='class', metavar='CLASS',
-                    help='Construct instance of this RDFS class (not yet implemented, can not be used together with -t)')
+argparser.add_argument('-s', '--section', dest='section', metavar='SECTION',
+                    help='Choose section to use. BY default, the first one from the template file is used')
 
 args = argparser.parse_args()
 
@@ -110,7 +110,7 @@ print("""Available commands:
     Executes CMD in a shell and takes output as value
 @
     Same as `| know edit --null`
-""")
+""", file=sys.stderr)
 
 class TemplateError(Exception):
     pass
@@ -211,11 +211,11 @@ class Section():
                 return self.input(prompt) # start over
             elif value[0] == '|':
                 try:
-                    value = subprocess.check_output(value[1:], shell=True)
-                except (subprocess.CalledProcessError):
+                    value = subprocess.check_output(value[1:], shell=True, universal_newlines=True)
+                    # universal_newlines=True causes value to be a string
+                except subprocess.CalledProcessError:
                     print("Your shell command failed, try again!", file=sys.stderr)
                     return self.input(prompt)
-        value = value.decode("UTF-8")
         if value[-1] == '\n':
             # Remove last newline in order to simplify
             # providing single-line literals and URIs.
@@ -366,6 +366,20 @@ parser = Parser()
 template = open(args.template, mode='r')
 lineiter = iter(template.readline, '')
 (sections, firstsection) = parser.parse(lineiter)
+
+if args.section:
+    try:
+        name = firstsection.expand(args.section)
+        firstsection = sections[name]
+    except PrefixNotFound:
+        print("Prefix used in section name not defined", file=sys.stderr)
+        exit(1)
+    except KeyError:
+        print("Section not found", file=sys.stderr)
+        exit(1)
+    except NotPName:
+        print("Invalid section name given at command line", file=sys.stderr)
+        exit(1)
 
 firstsection.construct(g, sections)
 
