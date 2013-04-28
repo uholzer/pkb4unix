@@ -4,6 +4,8 @@ import argparse
 import sys
 import subprocess
 import re
+from collections import defaultdict
+import itertools
 
 from rdflib import Graph, Literal, BNode, URIRef
 from rdflib_sparql.processor import processUpdate
@@ -112,6 +114,9 @@ print("""Available commands:
     Same as `| know edit --null`
 """, file=sys.stderr)
 
+COUNT_ONEORMORE = -1
+COUNT_ANY = -2
+
 class TemplateError(Exception):
     pass
 
@@ -145,26 +150,43 @@ class Section():
     def construct(self, g, sections, mainvar_value=None):
         print("", file=sys.stderr)
         print("=== {}".format(self.name), file=sys.stderr)
-        bindings = dict()
-        q = "INSERT {{\n{}}} WHERE {{ }}".format(self.quads)
+        varvalues = defaultdict(list)
 
-        print("I will insert triples with this SPARQL query:\n"+q, file=sys.stderr)
+        print("I will insert the following triples:\n"+self.quads, file=sys.stderr)
 
         if not mainvar_value:
             mainvar_value = self.input("CONSTRUCTING {}> ".format(self.mainvariable["prompt"]))
             mainvar_value = URIRef(mainvar_value)
-            bindings[self.mainvariable["name"]] = mainvar_value
+            varvalues[self.mainvariable["name"]].append(mainvar_value)
         else:
-            bindings[self.mainvariable["name"]] = mainvar_value
+            varvalues[self.mainvariable["name"]].append(mainvar_value)
             
         for var in self.variables:
             askfunc = getattr(self, "ask_" + var["nodetype"])
-            val = askfunc(g, sections, var)
-            bindings[var["name"]] = val
+
+            if var["count"] > 0:
+                r = range(0, var["count"])
+            elif var["count"] == COUNT_ANY or var["count"] == COUNT_ONEORMORE:
+                r = itertools.count(0)
+            else:
+                raise Error("Invalide count")
+                
+            for i in r:
+                val = askfunc(g, sections, var, self.prompt(var["nodetype"], i, var["count"], var["prompt"]))
+                if not str(val): # val itself could be false: "false"^^xsd:bool
+                    break
+                varvalues[var["name"]].append(val)
+
+        where_part = ""
+        for (var, values) in varvalues.items():
+            values_list = " ".join("({})".format(v.n3()) for v in values)
+            where_part += "VALUES ({}) {{ {} }}\n".format(str(var), values_list)
+        q = "INSERT {{\n{}}}\nWHERE {{\n{}}}".format(self.quads, where_part)
+
+        print("Adding tribles with SPARQL:\n"+q, file=sys.stderr)
 
         processUpdate(g, q,
             initNs=self.ns,
-            initBindings=bindings
         )
 
         print("=== {}".format("done"), file=sys.stderr)
@@ -175,9 +197,9 @@ class Section():
     def ask_NODE(self, g, sections, var):
         raise NotImplemented()
 
-    def ask_RESOURCE(self, g, sections, var):
+    def ask_RESOURCE(self, g, sections, var, prompt):
         if var["classhint"] and var["classhint"] in sections:
-            answer = self.input("RESOURCE (c to construct) {}> ".format(var["prompt"]))
+            answer = self.input(prompt)
             if answer == "c":
                 s = sections[var["classhint"]]
                 node = s.construct(g, sections, None)
@@ -186,20 +208,27 @@ class Section():
             else:
                 return URIRef(answer)
         else:
-            answer = self.input("RESOURCE {}> ".format(var["prompt"]))
+            answer = self.input(prompt)
             return URIRef(answer)
 
-    def ask_LITERAL(self, g, sections, var):
-        answer = self.input("LITERAL {}> ".format(var["prompt"]))
+    def ask_LITERAL(self, g, sections, var, prompt):
+        answer = self.input(prompt)
         return Literal(answer)
 
-    def ask_BNODE(self, g, sections, var):
+    def ask_BNODE(self, g, sections, var, prompt):
         # In order to implement casshints and construction,
         # one would create a blank node and then call
         # section.construct(g, sections, theNewBNode)
         print("{} ({}):".format(varname, descr), file=sys.stderr)
-        answer = self.input("BNODE {}> {}, please confirm".format(var["prompt"]))
+        answer = self.input(prompt)
         return BNode()
+
+    def prompt(self, nodetype, number, count, text):
+        if count == COUNT_ANY:
+            count = "*"
+        elif count == COUNT_ONEORMORE:
+            count = "+"
+        return "{}{}/{} {}> ".format(nodetype, number+1, count, text)
 
     def input(self, prompt):
         value = input(prompt)
@@ -216,7 +245,7 @@ class Section():
                 except subprocess.CalledProcessError:
                     print("Your shell command failed, try again!", file=sys.stderr)
                     return self.input(prompt)
-        if value[-1] == '\n':
+        if value and value[-1] == '\n':
             # Remove last newline in order to simplify
             # providing single-line literals and URIs.
             value = value[0:-1]
@@ -327,12 +356,12 @@ class Parser:
 
     def count(self, s):
         if s == '*':
-            return -2
+            return COUNT_ANY
         elif s == '+':
-            return -1
+            return COUNT_ONEORMORE
         else:
             try:
-                int(s)
+                return int(s)
             except:
                 raise TemplateError("Count expected")
 
