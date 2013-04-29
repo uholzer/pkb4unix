@@ -4,12 +4,14 @@ import sys
 import os
 import urllib
 import argparse
+from io import BytesIO
 
 from rdflib import Graph, URIRef
-from PKB4Unix import endpoint, iotools
+from PKB4Unix.iotools import absurl, guess_contentType, defaultAcceptHeader
+from PKB4Unix.endpoint import put_data
 
 argparser = argparse.ArgumentParser(description='Load a graph into the SPARQL endpoint')
-argparser.add_argument('files', nargs='+', metavar='FILE',
+argparser.add_argument('urls', nargs='+', metavar='URL',
                     help=('Files to load. - reads from STDIN.'
                           '(Reading from STDIN is inefficient, because '
                           'in order to determine the Content-length, '
@@ -24,34 +26,54 @@ argparser.add_argument('--incorporate', dest='incorporate', action='store_true',
 
 args = argparser.parse_args()
 
-if '-' in args.files:
+if '-' in args.urls:
     if not args.identifiers:
         print("When reading from STDIN, --identifier and --content-type must be used", file=sys.stderr)
         exit(1)
 
-if args.identifiers and not (len(args.identifiers) == len(args.files)):
+if args.identifiers and not (len(args.identifiers) == len(args.urls)):
     print("--indentifier must have as many arguments as there are files to load")
+    exit(1)
 elif not args.identifiers:
-    args.identifiers = args.files
-args.identifiers = [iotools.absurl(filename) for filename in args.identifiers]
+    args.identifiers = [None for f in args.urls]
 
-if args.contentTypes and not (len(args.contentTypes) == len(args.files)):
+if args.contentTypes and not (len(args.contentTypes) == len(args.urls)):
     if len(args.contentTypes) == 1:
-        args.contentTypes *= len(args.files)
+        args.contentTypes *= len(args.urls)
     else:
         print("--content-type must have one or as many arguments as there are files to load")
+        exit(1)
 elif not args.contentTypes:
-    args.contentTypes = ['application/rdf+xml' if filename=='-' else iotools.guess_contentType(filename, True) for filename in args.files]
+    args.contentTypes = [None for f in args.urls]
 
-for (filename, uri, contentType) in zip(args.files, args.identifiers, args.contentTypes):
-    print("Loading {} as {} ...".format("STDIN" if filename == '-' else filename, uri))
-    if filename == '-':
+for (url, identifier, contentType) in zip(args.urls, args.identifiers, args.contentTypes):
+    print("{}:".format("STDIN" if url == '-' else url), end=" ")
+    if url == '-':
         # Need to read all data beforehand, otherwise the
         # Content-length can not be determined by http.client.
         f = sys.stdin.buffer.read()
+        if not identifier:
+            identifier = url
+        if not contentType:
+            contentType = 'application/rdf+xml'
+    elif url.startswith("file:"):
+        f = open(iotools.url2localpath(absurl))
+        if not identifier:
+            identifier = url
+        if not contentType:
+            contentType = iotools.guess_contentType(url, True) or 'application/rdf+xml'
     else:
-        f = open(filename, mode="br")
-    endpoint.put_data(f, uri, contentType, keep_existing=args.incorporate)
-    if not filename == '-':
-        f.close()
+        req = urllib.request.Request(absurl(url))
+        req.add_header("Accept: ", contentType or defaultAcceptHeader)
+        f = urllib.request.urlopen(req)
+        if not identifier:
+            identifier = f.geturl()
+        if not contentType:
+            contentType = f.info().get('content-type')
+            contentType = contentType.split(";", 1)[0]
+        f = f.read()
+
+    print("loading as {} ...".format(identifier), end=" ")
+    put_data(f, identifier, contentType, keep_existing=args.incorporate)
+    print("done.")
 

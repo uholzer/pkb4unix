@@ -9,6 +9,8 @@ import urllib
 mimetypes.init()
 mimetypes.add_type("text/turtle", ".ttl")
 
+defaultAcceptHeader = "application/rdf+xml, text/turtle"
+
 def guess_contentType(url, include_charset=False):
     (t, enc) = mimetypes.guess_type(url)
     if include_charset and t.startswith("text/"):
