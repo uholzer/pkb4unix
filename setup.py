@@ -8,7 +8,7 @@ setup(name='pkb4unix',
       author='Urs Holzer',
       author_email='urs@andonyar.com',
       url='http://www.andonyar.com/rec/2012/pkb/',
-      py_modules=['PKB4Unix'],
+      packages=['PKB4Unix'],
       scripts=[
         'know',
         'know-graph',

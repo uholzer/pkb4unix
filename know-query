@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from rdflib import Graph
-import PKB4Unix
+from PKB4Unix import endpoint
 
 argparser = argparse.ArgumentParser(description='Query a SPARQL endpoint')
 argparser.add_argument('filename', nargs='?', metavar='FILE',
@@ -18,7 +18,7 @@ if args.filename:
 else:
     query = sys.stdin.read()
 
-kb = PKB4Unix.kbConnect()
+kb = endpoint.kbConnect()
 
 result = kb.query(query)
 

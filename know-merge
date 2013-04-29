@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from rdflib import URIRef
-import PKB4Unix
+from PKB4Unix import iotools, endpoint
 
 argparser = argparse.ArgumentParser(description='Merge graphs')
 argparser.add_argument('dest_graph', metavar='DEST_GRAPH',
@@ -14,8 +14,8 @@ argparser.add_argument('src_graphs', nargs='+', metavar='GRAPH',
 
 args = argparser.parse_args()
 
-args.dest_graph = PKB4Unix.absurl(args.dest_graph)
-args.src_graphs = [PKB4Unix.absurl(g) for g in args.src_graphs]
+args.dest_graph = iotools.absurl(args.dest_graph)
+args.src_graphs = [iotools.absurl(g) for g in args.src_graphs]
 
 q = """
 INSERT {
@@ -34,7 +34,7 @@ q += "\n}\n"
 q += "}"
 
 
-kb = PKB4Unix.kbConnect()
+kb = endpoint.kbConnect()
 
 kb.store.update(q)
 

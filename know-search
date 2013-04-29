@@ -8,7 +8,6 @@ import http.client
 from subprocess import Popen, PIPE
 
 from rdflib import Graph, URIRef
-import PKB4Unix
 
 argparser = argparse.ArgumentParser(description='Search the Internet for Resources')
 argparser.add_argument('keyword',

@@ -11,34 +11,6 @@ NS_GRAPH = os.environ["KNOW_NS_GRAPH"]
 
 NS_KB = rdflib.Namespace("http://www.andonyar.com/rec/2012/pkb/conf#")
 
-contentTypes = {
-    "rdf": "application/rdf+xml",
-    "ttl": "text/turtle; charset=utf-8",
-}
-
-def fileurl2path(url):
-    url = urllib.parse.urlparse(url)
-    if not url.scheme == "file":
-        raise SemPipeException("source must be a file")
-    return urllib.request.url2pathname(url.path)
-
-def absurl(url, base=None):
-    """Makes an absolute URL from a relative
-
-    In order to make it possible to also use filenames as url, it gets
-    quoted first. Only characters not allowed in URLs are quoted. This
-    means that certain filenames (those with : or % in their name)
-    will not be treated the right way. The reason for this behaviour
-    is that an URI like urn:uuid:something could really be a filename
-    but is also an absolute URI and has to be interpreted as such."""
-    base = base if base else os.path.abspath(".")
-    base = "file://" + urllib.request.pathname2url(base)
-    url = urllib.parse.quote_plus(url, safe='/:%')
-    if base[-1] != "/": base += "/"
-    return urllib.parse.urljoin(base, url)
-
-def guessContentType(url):
-    return contentTypes[url.rsplit(".", 1)[-1]]
 
 def put_data(data, identifier, contentType, keep_existing=False):
     """data can be an open file, an iterable (since Python 3.2), a bytes or a string object"""
@@ -82,7 +54,6 @@ def delete_graph(identifier):
     return status
 
 def get_data(identifier, contentType):
-    """data can be an open file, an iterable (since Python 3.2), a bytes or a string object"""
     import http.client
     parsedURL = urllib.parse.urlparse(ENDPOINT_UPDATE)
     connType = { "http": http.client.HTTPConnection, "https": http.client.HTTPSConnection }[parsedURL.scheme]

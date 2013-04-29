@@ -6,7 +6,7 @@ import urllib
 import argparse
 
 from rdflib import Graph, URIRef
-import PKB4Unix
+from PKB4Unix import endpoint, iotools
 
 argparser = argparse.ArgumentParser(description='Load a graph into the SPARQL endpoint')
 argparser.add_argument('files', nargs='+', metavar='FILE',
@@ -33,7 +33,7 @@ if args.identifiers and not (len(args.identifiers) == len(args.files)):
     print("--indentifier must have as many arguments as there are files to load")
 elif not args.identifiers:
     args.identifiers = args.files
-args.identifiers = [PKB4Unix.absurl(filename) for filename in args.identifiers]
+args.identifiers = [iotools.absurl(filename) for filename in args.identifiers]
 
 if args.contentTypes and not (len(args.contentTypes) == len(args.files)):
     if len(args.contentTypes) == 1:
@@ -41,7 +41,7 @@ if args.contentTypes and not (len(args.contentTypes) == len(args.files)):
     else:
         print("--content-type must have one or as many arguments as there are files to load")
 elif not args.contentTypes:
-    args.contentTypes = ['application/rdf+xml' if filename=='-' else PKB4Unix.guessContentType(filename) for filename in args.files]
+    args.contentTypes = ['application/rdf+xml' if filename=='-' else iotools.guess_contentType(filename, True) for filename in args.files]
 
 for (filename, uri, contentType) in zip(args.files, args.identifiers, args.contentTypes):
     print("Loading {} as {} ...".format("STDIN" if filename == '-' else filename, uri))
@@ -51,7 +51,7 @@ for (filename, uri, contentType) in zip(args.files, args.identifiers, args.conte
         f = sys.stdin.buffer.read()
     else:
         f = open(filename, mode="br")
-    PKB4Unix.put_data(f, uri, contentType, keep_existing=args.incorporate)
+    endpoint.put_data(f, uri, contentType, keep_existing=args.incorporate)
     if not filename == '-':
         f.close()
 

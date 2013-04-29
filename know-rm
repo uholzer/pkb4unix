@@ -5,7 +5,7 @@ import os
 import urllib
 import argparse
 
-import PKB4Unix
+from PKB4Unix import endpoint
 
 argparser = argparse.ArgumentParser(
     description="Remove graph from the SPARQL endpoint",
@@ -16,9 +16,9 @@ argparser.add_argument('graphs', nargs='+', metavar='URI',
 
 args = argparser.parse_args()
 
-args.graphs = [PKB4Unix.absurl(g) for g in args.graphs]
+args.graphs = [endpoint.absurl(g) for g in args.graphs]
 
 for uri in args.graphs:
     print("Removing {} ...".format(uri))
-    PKB4Unix.delete_graph(uri)
+    endpoint.delete_graph(uri)
 
