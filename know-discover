@@ -1,0 +1,27 @@
+#!/usr/bin/python3
+
+import sys
+import subprocess
+import urllib
+import argparse
+import http.client
+from subprocess import Popen, PIPE
+
+from rdflib import Graph, URIRef
+
+argparser = argparse.ArgumentParser(description='Find and Load Graphs from the Semantic Web',
+    epilog='''Currently this just fetches the uri with `know load`.
+    Using semantic search engines (e.g. Sindice) will be implemented
+    later.'''
+)
+argparser.add_argument('uris', nargs='+', metavar='URI',
+                       help=('Resource about which you want to find information'))
+
+args = argparser.parse_args()
+
+for uri in args.uris:
+    if uri.startswith("http:"):
+        subprocess.call(["know-load", uri])
+    else:
+        print("Couldn't find anything for {}.".format(uri))
+
