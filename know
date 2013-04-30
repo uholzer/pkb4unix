@@ -1,103 +1,151 @@
 #!/usr/bin/python3
 
-import argparse
-import sys
+from sys import argv
 import os
+import textwrap
 
 KNOW_PATH = None
 
-def run(executable, args):
-    os.execvp(executable, [executable] + args)
-
-argparser = argparse.ArgumentParser(
-    description='Knowledge Base Toolkit',
-    add_help=False
-)
-
+rdf_tools = [
+    ('rdf-construct', 'construct a graph'),
+    ('rdf-edit', 'read from stdin, edit, print on stdout'),
+    ('rdf-format-csv', 'csv formatter'),
+    ('rdf-uuid', 'generate a urn:uuid URI')
+]
+plumbing = [
+    ('load', 'load a graph into the endpoint'),
+    ('query', 'query the endpoint'),
+    ('query-template', 'create a template of a SPARQL query'),
+    ('save', 'write a graph from the endpoint to a file'),
+]
+workflow = [
+    ('graph', 'graph manipulations'),
+    ('merge', 'merge two graphs in the endpoint'),
+    ('rm', 'delete a graph from the endpoint'),
+    ('search', 'search the semantic web for resources'),
+    ('discover', 'search the semantic web for graphs'),
+]
+subcommands = [c for (c,info) in rdf_tools + plumbing + workflow]
 relevant_env = {
     'KNOW_ENDPOINT_QUERY': {
         'shortopt': '-Q',
+        'longopt': '--know-endpoint-query',
         'metavar': 'URL',
         'default': "http://localhost:8080/openrdf-sesame/repositories/pkb", 
         'help': "URL of the SPARQL endpoint for queries"
     },
     'KNOW_ENDPOINT_UPDATE': {
         'shortopt': '-U',
+        'longopt': '--know-endpoint-update',
         'metavar': 'URL',
         'default': "http://localhost:8080/openrdf-sesame/repositories/pkb/statements",
         'help': "URL of the SPARQL endpoint for updates"
     },
     'KNOW_ENDPOINT_INDIRECT': {
         'shortopt': '-I',
+        'longopt': '--know-endpoint-indirect',
         'metavar': 'URL',
         'default': "http://localhost:8080/openrdf-sesame/repositories/pkb/rdf-graphs/service",
         'help': "URL of the SPARQL endpoint's inditirect graph store"
     },
     'KNOW_PROVENANCE_GRAPH': {
         'shortopt': '-P',
+        'longopt': '--know-provenance-graph',
         'metavar': 'URI',
         'default': "kb:provenance",
         'help': "URI of the graph storing provenance information"
     },
     'KNOW_NS_GRAPH': {
         'shortopt': '-N',
+        'longopt': '--know-ns-graph',
         'metavar': 'URI',
         'default': "kb:namespaces",
         'help': "URI of the graph containing information about namespaces"
     },
     'KNOW_PATH': {
         'shortopt': '-E',
+        'longopt': '--know-path',
         'metavar': 'DIR',
         'default': KNOW_PATH,
         'help': "Location of executables (gets added to PATH)"
     }
 }
 
-for (k,info) in sorted(relevant_env.items()):
-    argparser.add_argument(info['shortopt'], '--'+k.lower().replace('_','-'), dest=k, metavar=info['metavar'],
-                        default=None, help=info['help'])
+scriptname = argv[0].split("/")[-1]
+arglist = argv[1:]
+opts = { info['shortopt']: env for (env, info) in relevant_env.items() }
+opts.update({ info['longopt']: env for (env, info) in relevant_env.items() })
+env_changes = {}
 
-subparsers = argparser.add_subparsers(title='subcommands', dest='subcmd')
-subparsers.add_parser('help', help='show this help message and exit')
+do_help = False
+while arglist and (arglist[0] in opts or arglist[0] in {"--help", "help", "-h"}):
+    if arglist[0] in {"--help", "help", "-h"}:
+        do_help = True
+        arglist = arglist[1:]
+    else:
+        env_changes[opts[arglist[0]]] = arglist[1]
+        val = arglist[1]
+        arglist = arglist[2:]
 
-subcommands = [
-    ('graph', 'graph manipulations'),
-    ('load', 'load a graph into the endpoint'),
-    ('merge', 'merge two graphs in the endpoint'),
-    ('query', 'query the endpoint'),
-    ('query-template', 'create a template of a SPARQL query'),
-    ('rm', 'delete a graph from the endpoint'),
-    ('save', 'write a graph from the endpoint to a file'),
-    ('search', 'search the semantic web for resources'),
-    ('discover', 'search the semantic web for graphs'),
-    ('rdf-construct', 'construct a graph'),
-    ('rdf-edit', 'read from stdin, edit, print on stdout'),
-    ('rdf-format-csv', 'csv formatter'),
-    ('rdf-uuid', 'generate a urn:uuid URI')
-]
+def help_entryindent(key, info, nlfirst=False):
+    if nlfirst:
+        res = textwrap.fill(
+            key,
+            initial_indent=" "*4,
+            subsequent_indent=" "*4
+        )
+        res += "\n"
+        res += textwrap.fill(
+            info,
+            initial_indent=" "*24,
+            subsequent_indent=" "*24
+        )
+        return res
+    else:
+        return textwrap.fill(
+            "{:20}{}".format(key, info),
+            initial_indent=" "*4,
+            subsequent_indent=" "*24
+        )
 
-for (cmd, desc) in subcommands:
-    p = subparsers.add_parser(cmd, help=desc)
-    p.add_argument('subargs', metavar='ARG', nargs='*')
+if do_help:
+    print(textwrap.dedent('''
+        Knowledge Base Toolkit
 
-arglist = []
-subarglist = []
-subcommands_names = {c[0] for c in subcommands}
-for (i, a) in enumerate(sys.argv[1:]):
-    arglist.append(a)
-    if a in subcommands_names:
-        subarglist = sys.argv[i+2:]
-        break
+        usage: {} [-I URL] [-Q URL] [-U URL] [-N URI] [-E DIR] [-P URI]
+               SUBCOMMAND ...
+    '''.format(scriptname)))
+    print("Optional arguments:")
+    for env in relevant_env:
+        print(help_entryindent(
+            "{shortopt} {metavar}, {longopt} {metavar}".format(**relevant_env[env]),
+            relevant_env[env]['help'],
+            nlfirst=True
+        ))
+    print("")
+    print("Help:")
+    print(help_entryindent("help, -h, --help", "Show this help message and exit"))
+    print("")
+    print("Workflow commands:")
+    for (c, info) in workflow:
+        print(help_entryindent(c, info))
+    print("")
+    print("Plumbing commands:")
+    for (c, info) in plumbing:
+        print(help_entryindent(c, info))
+    print("")
+    print("RDF tools:")
+    for (c, info) in rdf_tools:
+        print(help_entryindent(c, info))
+    print("")
+    print("Current Configuration:")
 
-args = argparser.parse_args(arglist)
-if args.subcmd=='help':
-    argparser.print_help()
-    print("\nCurrent Configuration:")
-
+# Applying the requested changes to the environment
+# (and if do_help, print the values)
 for (k, info) in sorted(relevant_env.items()):
-    if getattr(args, k):
-        value = getattr(args, k)
-        origin = "command line option --{}".format(k.lower().replace('_','-'))
+    if k in env_changes:
+        value = env_changes[k]
+        origin = "command line option {}".format(relevant_env[k]['longopt'])
     elif k in os.environ:
         value = os.environ[k]
         origin = "environment variable {}".format(k)
@@ -106,19 +154,36 @@ for (k, info) in sorted(relevant_env.items()):
         origin = "default"
     if value is not None:
         os.environ[k] = value
-    if args.subcmd=='help':
-        print("{}: {} (by {})".format(k, value if value is not None else "(not set)", origin))
-if args.subcmd=='help': 
+    if do_help:
+        print("{}:\n    {}\n    (by {})".format(k, value if value is not None else "(not set)", origin))
+
+if do_help:
     print("")
     exit(0)
-    
+
+# Handle common errors
+if not arglist:
+    print("A subcommand must be provided. Please refer to `{} help`".format(scriptname))
+    exit(1)
+if arglist[0] and arglist[0][0]=='-':
+    print("There is no global option '{}'. Please refer to `{} help`".format(arglist[0], scriptname))
+    exit(1)
+if arglist[0] not in subcommands:
+    print("Subcommand '{}' not found. Please refer to `{} help`".format(arglist[0], scriptname))
+    exit(1)
+
+################
+
 # Adding KNOW_PATH to front of PATH
 # The know-* scripts expect all know-* scripts to be in the path.
 # The function run above does so too.
 if "KNOW_PATH" in os.environ and not os.environ["PATH"].startswith(os.environ["KNOW_PATH"]+":"):
     os.environ["PATH"] = "{}:{}".format(os.environ["KNOW_PATH"],os.environ["PATH"])
 
-run('know-'+args.subcmd, subarglist)
+executable = 'know-'+arglist[0]
+args = arglist[1:]
+
+os.execvp(executable, [executable] + args)
 
 
 
