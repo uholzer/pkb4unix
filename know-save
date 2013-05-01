@@ -24,7 +24,7 @@ args.identifiers = [iotools.absurl(ident) for ident in args.identifiers]
 if args.files and not (len(args.files) == len(args.identifiers)):
     print("--file must have as many arguments as there are graphs to save")
 elif not args.files:
-    args.files = [iotools.fileurl2path(ident) for ident in args.identifiers]
+    args.files = [iotools.url2localpath(ident) for ident in args.identifiers]
 
 if args.contentTypes and not (len(args.contentTypes) == len(args.identifiers)):
     if len(args.contentTypes) == 1:
