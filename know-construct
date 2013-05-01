@@ -1,0 +1,21 @@
+#!/bin/sh
+
+if [ ! $1 ] || [ $1 = "--help" ]; then
+    echo "Construct a graph in the SPARQL endpoint"
+    echo
+    echo "usage: $0 TEMPLATE [GRAPH]"
+    exit 0
+fi
+
+graph=$1
+if [ !$graph ]; then
+    graph=`know-rdf-uuid`
+fi
+
+echo "$0: Constructing graph $graph"
+
+know-rdf-construct $1 | know-rdf-edit | know-load - --identifier `know-rdf-uuid` 
+
+echo
+echo "$0: Construction of graph $graph completed."
+

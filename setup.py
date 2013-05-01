@@ -11,6 +11,7 @@ setup(name='pkb4unix',
       packages=['PKB4Unix'],
       scripts=[
         'know',
+        'know-construct',
         'know-graph',
         'know-load',
         'know-merge',

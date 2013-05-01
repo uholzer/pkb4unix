@@ -19,6 +19,7 @@ plumbing = [
     ('save', 'write a graph from the endpoint to a file'),
 ]
 workflow = [
+    ('construct', 'constructing a graph based on templates'),
     ('graph', 'graph manipulations'),
     ('merge', 'merge two graphs in the endpoint'),
     ('rm', 'delete a graph from the endpoint'),
