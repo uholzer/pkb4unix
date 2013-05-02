@@ -4,7 +4,7 @@ import argparse
 import sys
 import subprocess
 import re
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import itertools
 
 from rdflib import Graph, Literal, BNode, URIRef
@@ -126,6 +126,16 @@ class NotPName(Exception):
 class PrefixNotFound(Exception):
     pass
 
+TemplateVariable = namedtuple('TemplateVariable', [
+    'nodetype',
+    'count',
+    'name',
+    'classhint',
+    'datatypehint',
+    'langhint',
+    'prompt'
+    ])
+
 class Section():
     def __init__(self):
         self.name = ""
@@ -155,29 +165,29 @@ class Section():
         print("I will insert the following triples:\n"+self.quads, file=sys.stderr)
 
         if not mainvar_value:
-            mainvar_value = self.input("CONSTRUCTING {}> ".format(self.mainvariable["prompt"]))
+            mainvar_value = self.input("CONSTRUCTING {}> ".format(self.mainvariable.prompt))
             mainvar_value = URIRef(mainvar_value)
-            varvalues[self.mainvariable["name"]].append(mainvar_value)
+            varvalues[self.mainvariable.name].append(mainvar_value)
         else:
-            varvalues[self.mainvariable["name"]].append(mainvar_value)
+            varvalues[self.mainvariable.name].append(mainvar_value)
             
         for var in self.variables:
-            askfunc = getattr(self, "ask_" + var["nodetype"])
+            askfunc = getattr(self, "ask_" + var.nodetype)
 
-            if var["count"] > 0:
-                r = range(0, var["count"])
-            elif var["count"] == COUNT_ONEORNONE:
+            if var.count > 0:
+                r = range(0, var.count)
+            elif var.count == COUNT_ONEORNONE:
                 r = range(0, 1)
-            elif var["count"] == COUNT_ANY or var["count"] == COUNT_ONEORMORE:
+            elif var.count == COUNT_ANY or var.count == COUNT_ONEORMORE:
                 r = itertools.count(0)
             else:
                 raise Error("Invalide count")
                 
             for i in r:
-                val = askfunc(g, sections, var, self.prompt(var["nodetype"], i, var["count"], var["prompt"]))
+                val = askfunc(g, sections, var, self.prompt(var.nodetype, i, var.count, var.prompt))
                 if not str(val): # val itself could be false: "false"^^xsd:bool
                     break
-                varvalues[var["name"]].append(val)
+                varvalues[var.name].append(val)
 
         where_part = ""
         for (var, values) in varvalues.items():
@@ -198,10 +208,10 @@ class Section():
         raise NotImplemented()
 
     def ask_RESOURCE(self, g, sections, var, prompt):
-        if var["classhint"] and var["classhint"] in sections:
+        if var.classhint and var.classhint in sections:
             answer = self.input(prompt)
             if answer == "c":
-                s = sections[var["classhint"]]
+                s = sections[var.classhint]
                 node = s.construct(g, sections, None)
                 print("back to {}".format(self.name), file=sys.stderr)
                 return node
@@ -212,12 +222,10 @@ class Section():
             return URIRef(answer)
 
     def ask_LITERAL(self, g, sections, var, prompt):
-        lang = var["classhint"] if not isinstance(var["classhint"], URIRef) else None
-        datatype = var["classhint"] if isinstance(var["classhint"], URIRef) else None
         answer = self.input(prompt)
         # TODO: Let the user set datatype or language.
         
-        return Literal(answer, lang=lang, datatype=datatype)
+        return Literal(answer, lang=var.langhint, datatype=var.datatypehint)
 
     def ask_BNODE(self, g, sections, var, prompt):
         # In order to implement casshints and construction,
@@ -315,13 +323,23 @@ class Parser:
         
     def parse_NODE(self, section, argline, lineiter):
         args = argline.split(None, 3)
-        section.variables.append({
-            "nodetype": args[0],
-            "count": self.count(args[1]),
-            "name": self.variable(args[2]),
-            "classhint": self.classhint(section, args[0], args[3]),
-            "prompt": args[3]
-        })
+        classhint = None
+        datatypehint = None
+        langhint = None
+        if args[0] == "LITERAL":
+            (datatypehint, langhint) = self.lithint(section, args[3])
+        else:
+            classhint = self.classhint(section, args[3])
+        var = TemplateVariable(
+            nodetype=args[0],
+            count=self.count(args[1]),
+            name=self.variable(args[2]),
+            classhint=classhint,
+            datatypehint=datatypehint,
+            langhint=langhint,
+            prompt=args[3]
+        )
+        section.variables.append(var)
 
     parse_RESOURCE = parse_NODE
     parse_LITERAL = parse_NODE
@@ -344,21 +362,22 @@ class Parser:
         section = Section()
         section.ns = dict(self.globalns) # Include globally defined namespaces
         args = line.split(None, 2)
-        c = self.classhint(section, "RESOURCE", args[0])
+        c = self.classhint(section, args[0])
         if not c:
             raise TemplateError("Invalid Syntax in section start")
         section.name = c
         self.sections[c] = section
 
-        section.mainvariable = {
-            "nodetype": "RESOURCE",
-            "count": 1,
-            "name": self.variable(args[1]),
-            "classhint": c,
-            "prompt": args[2]
-        }
+        section.mainvariable = TemplateVariable(
+            nodetype="RESOURCE",
+            count=1,
+            name=self.variable(args[1]),
+            classhint=c,
+            datatypehint=None,
+            langhint=None,
+            prompt=args[2]
+        )
         return section
-        
 
     def count(self, s):
         if s == '*':
@@ -379,24 +398,29 @@ class Parser:
         else:
             raise TemplateError("Variable expected")
 
-    def classhint(self, section, nodetype, s):
+    def classhint(self, section, s):
         match = self.classhint_re.search(s)
         if match:
             hint = match.group(1)
-            if nodetype == "LITERAL":
-                if hint.startswith("^^"):
-                    return URIRef(section.expand(hint[2:]))
-                elif hint.startswith("@"):
-                    return hint[1:]
-                else:
-                    raise TemplateError("Malformed literal type hint")
-            else:
-                try:
-                    return section.expand(hint)
-                except NotPName:
-                    return hint
+            try:
+                return section.expand(hint)
+            except NotPName:
+                return hint
         else:
             return None
+
+    def lithint(self, section, s):
+        match = self.classhint_re.search(s)
+        if match:
+            hint = match.group(1)
+            if hint.startswith("^^"):
+                return (URIRef(section.expand(hint[2:])), None)
+            elif hint.startswith("@"):
+                return (None, hint[1:])
+            else:
+                raise TemplateError("Malformed literal type hint")
+        else:
+            return (None, None)
 
 
 if args.outfile:
