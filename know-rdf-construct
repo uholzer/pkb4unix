@@ -8,7 +8,6 @@ from collections import defaultdict
 import itertools
 
 from rdflib import Graph, Literal, BNode, URIRef
-from rdflib_sparql.processor import processUpdate
 
 argparser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -185,9 +184,7 @@ class Section():
 
         print("Adding tribles with SPARQL:\n"+q, file=sys.stderr)
 
-        processUpdate(g, q,
-            initNs=self.ns,
-        )
+        g.update(q, initNs=self.ns)
 
         print("=== {}".format("done"), file=sys.stderr)
         print("", file=sys.stderr)
