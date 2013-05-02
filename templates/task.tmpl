@@ -1,12 +1,18 @@
 NS wf: http://www.w3.org/2005/01/wf/flow#
 
-[wf:Open] ?task An open task
+[wf:Task] ?task Creating an open task
 
 RESOURCE 1 ?tracker [wf:Tracker] tracked by
+LITERAL  ? ?dateDue date this task has to be completed
+RESOURCE * ?dependent [wf:Task] A task this one depends on
+LITERAL  1 ?description description
 
 INSERT {
-    ?task a wf:Open .
-    ?task wf:tracker ?tracker .
+    ?task a wf:Open ;
+          wf:tracker ?tracker ;
+          wf:dateDue ?dateDue ;
+          wf:dependent ?dependent ;
+          wf:description ?description .
 }
 
 [wf:Tracker] ?tracker Tracker

@@ -113,8 +113,9 @@ print("""Available commands:
     Same as `| know edit --null`
 """, file=sys.stderr)
 
-COUNT_ONEORMORE = -1
-COUNT_ANY = -2
+COUNT_ONEORNONE = -1
+COUNT_ONEORMORE = -2
+COUNT_ANY = -3
 
 class TemplateError(Exception):
     pass
@@ -165,6 +166,8 @@ class Section():
 
             if var["count"] > 0:
                 r = range(0, var["count"])
+            elif var["count"] == COUNT_ONEORNONE:
+                r = range(0, 1)
             elif var["count"] == COUNT_ANY or var["count"] == COUNT_ONEORMORE:
                 r = itertools.count(0)
             else:
@@ -223,6 +226,8 @@ class Section():
     def prompt(self, nodetype, number, count, text):
         if count == COUNT_ANY:
             count = "*"
+        if count == COUNT_ONEORNONE:
+            count = "?"
         elif count == COUNT_ONEORMORE:
             count = "+"
         return "{}{}/{} {}> ".format(nodetype, number+1, count, text)
@@ -356,6 +361,8 @@ class Parser:
             return COUNT_ANY
         elif s == '+':
             return COUNT_ONEORMORE
+        elif s == '?':
+            return COUNT_ONEORNONE
         else:
             try:
                 return int(s)
