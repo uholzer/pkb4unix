@@ -212,8 +212,12 @@ class Section():
             return URIRef(answer)
 
     def ask_LITERAL(self, g, sections, var, prompt):
+        lang = var["classhint"] if not isinstance(var["classhint"], URIRef) else None
+        datatype = var["classhint"] if isinstance(var["classhint"], URIRef) else None
         answer = self.input(prompt)
-        return Literal(answer)
+        # TODO: Let the user set datatype or language.
+        
+        return Literal(answer, lang=lang, datatype=datatype)
 
     def ask_BNODE(self, g, sections, var, prompt):
         # In order to implement casshints and construction,
@@ -378,10 +382,19 @@ class Parser:
     def classhint(self, section, nodetype, s):
         match = self.classhint_re.search(s)
         if match:
-            try:
-                return section.expand(match.group(1))
-            except NotPName:
-                return match.group(1)
+            hint = match.group(1)
+            if nodetype == "LITERAL":
+                if hint.startswith("^^"):
+                    return URIRef(section.expand(hint[2:]))
+                elif hint.startswith("@"):
+                    return hint[1:]
+                else:
+                    raise TemplateError("Malformed literal type hint")
+            else:
+                try:
+                    return section.expand(hint)
+                except NotPName:
+                    return hint
         else:
             return None
 

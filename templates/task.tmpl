@@ -1,9 +1,10 @@
-NS wf: http://www.w3.org/2005/01/wf/flow#
+NS wf:  http://www.w3.org/2005/01/wf/flow#
+NS xsd: http://www.w3.org/2001/XMLSchema#
 
 [wf:Task] ?task Creating an open task
 
 RESOURCE 1 ?tracker [wf:Tracker] tracked by
-LITERAL  ? ?dateDue date this task has to be completed
+LITERAL  ? ?dateDue [^^xsd:date] date this task has to be completed
 RESOURCE * ?dependent [wf:Task] A task this one depends on
 LITERAL  1 ?description description
 
