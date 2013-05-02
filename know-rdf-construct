@@ -47,9 +47,13 @@ NODE <count> <variable> <prompt>
     Declares <variable> to be any node. <prompt> is shown to
     the user to set the variable.
 
-LITERAL <count> <variable> <prompt>
+LITERAL <count> <variable> [<datatype or language>] <prompt>
     Declares <variable> to be a literal. <prompt> is shown to the user
     in order to determine the value.
+    <datatype or language> provides the (recommended) datatype or
+    language. It is of the form ^^datatypeuri or @language. Examples
+    are '^^xsd:date' and '@en'. The part [<datatype or language>] is
+    optional.
 
 RESOURCE <count> <variable> [<class>] <prompt>
     Declares <variable> to ba a resource. [<class>] is optional. If
