@@ -26,6 +26,13 @@ setup(name='pkb4unix',
         'know-search',
       ],
       keywords=['Requires: rdflib'],
+      data_files=[
+            ('share/pkb4unix/templates', [
+                'templates/README',
+                'templates/task.tmpl',
+                'templates/website.tmpl',
+            ])
+      ],
       classifiers=[
             "Programming Language :: Python :: 3",
             "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",

@@ -1,7 +1,11 @@
 This directory contains examples of templates. They are adapted to the
 author. Consequently, you will have to adapt them to your own needs.
 
-The templates be used with
+The templates are used with
+
+  know rdf-construct <template file>
+
+or
 
   know construct <template file>
 
