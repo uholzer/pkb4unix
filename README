@@ -43,6 +43,101 @@ Read the help of a command:
 
     know <command> --help
 
+=== Example Session ===
+
+Starting my SPARQL backend
+
+    $ ./tomcat-instance/bin/startup.sh 
+    ...
+    Tomcat started
+
+Loading my data into the endpoint
+
+    $ know load data/*
+    data/friends.rdf: loading as file:///home/urs/p/knowledge/data/friends.rdf ... done.
+    data/interesting_websites.ttl: loading as file:///home/urs/p/knowledge/data/interesting_websites.ttl ... done.
+    data/problemandsolution.ttl: loading as file:///home/urs/p/knowledge/data/problemandsolution.ttl ... done.
+    data/quotes.ttl: loading as file:///home/urs/p/knowledge/data/quotes.ttl ... done.
+    data/software.ttl: loading as file:///home/urs/p/knowledge/data/software.ttl ... done.
+    data/tracker.rdf: loading as file:///home/urs/p/knowledge/data/tracker.rdf ... done.
+
+Interactively constructing a new task
+
+    $ know construct ~/.local/share/pkb4unix/templates/task.tmpl
+    /home/urs/.local/bin/know-construct: Constructing graph urn:uuid:b6667453-3a99-41d5-9ad0-e5419d9a3f69
+    Available commands:
+    ! CMD
+        Executes CMD in a shell
+    | CMD
+        Executes CMD in a shell and takes output as value
+    @
+        Same as `| know edit --null`
+
+
+    === http://www.w3.org/2005/01/wf/flow#Task
+    I will insert the following triples:
+        ?task a wf:Open ;
+              wf:tracker ?tracker ;
+              wf:dateDue ?dateDue ;
+              wf:dependent ?dependent ;
+              wf:description ?description .
+
+    CONSTRUCTING Creating an open task> | know rdf-uuid
+    RESOURCE1/1 [wf:Tracker] tracked by> private:tracker
+    LITERAL1/? [^^xsd:date] date this task has to be completed> 2013-05-15
+    RESOURCE1/* [wf:Task] A task this one depends on> 
+    LITERAL1/1 description> Finish publication of Carambola manual
+    Adding tribles with SPARQL:
+    INSERT {
+        ?task a wf:Open ;
+              wf:tracker ?tracker ;
+              wf:dateDue ?dateDue ;
+              wf:dependent ?dependent ;
+              wf:description ?description .
+    }
+    WHERE {
+    VALUES (?task) { (<urn:uuid:126b72a8-cc93-4353-afd2-8ce7acdca5be>) }
+    VALUES (?dateDue) { ("2013-05-15"^^<http://www.w3.org/2001/XMLSchema#date>) }
+    VALUES (?description) { ("Finish publication of Carambola manual") }
+    VALUES (?tracker) { (<private:tracker>) }
+    }
+    === done
+
+    ## At this point an editor is called to check the created graph
+    ## and modify if necessary.
+
+    STDIN: loading as urn:uuid:7ce4218b-343a-46c1-b13b-6b816c13be85 ... done.
+
+    /home/urs/.local/bin/know-construct: Construction of graph urn:uuid:b6667453-3a99-41d5-9ad0-e5419d9a3f69 completed.
+
+Merging with the tracker graph
+
+    $ know merge data/tracker.rdf urn:uuid:7ce4218b-343a-46c1-b13b-6b816c13be85
+
+Saving the tracker graph to file
+
+    $ know save data/tracker.rdf 
+    Saving file:///home/urs/p/knowledge/data/tracker.rdf to /home/urs/p/knowledge/data/tracker.rdf ...
+    $ cat data/tracker.rdf
+    ...
+    <rdf:Description rdf:about="private:tracker">
+            <rdf:type rdf:resource="http://www.w3.org/2005/01/wf/flow#Tracker"/>
+            <description xmlns="http://www.w3.org/2005/01/wf/flow#">My private tracker</description>
+    </rdf:Description>
+
+    <rdf:Description rdf:about="urn:uuid:126b72a8-cc93-4353-afd2-8ce7acdca5be">
+            <rdf:type rdf:resource="http://www.w3.org/2005/01/wf/flow#Open"/>
+            <description xmlns="http://www.w3.org/2005/01/wf/flow#">Finish publication of Carambola manual</description>
+            <tracker xmlns="http://www.w3.org/2005/01/wf/flow#" rdf:resource="private:tracker"/>
+            <dateDue xmlns="http://www.w3.org/2005/01/wf/flow#" rdf:datatype="http://www.w3.org/2001/XMLSchema#date">2013-05-15</dateDue>
+    </rdf:Description>
+
+Stopping the SPARQL backend
+
+    $ ./tomcat-instance/bin/shutdown.sh 
+    ...
+    Tomcat stopped 
+
 === License ===
 
 pkb4unix is free software: you can redistribute it and/or modify
