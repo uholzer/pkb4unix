@@ -1,0 +1,49 @@
+#!/usr/bin/python3
+
+import argparse
+from sys import stdin, stdout
+
+from rdflib import Graph, URIRef, Literal
+from lxml import etree
+from RDFFresnel import Context, ContainerBox
+
+from PKB4Unix import endpoint
+
+argparser = argparse.ArgumentParser(
+    description=('Render Resources with Fresnel'))
+argparser.add_argument('resources', nargs='+', metavar='URI',
+                    help=('Resource to be rendered. Use - to read the URIs from standard input'))
+argparser.add_argument('--instance-graph', metavar='GRAPH', dest='instance_graph',
+                    help=('Restrict instance data to this graph'))
+argparser.add_argument('--lens-graph', metavar='GRAPH', dest='lens_graph',
+                    help=('Graph containing Fresnel Lenses (if not given, all available graphs are searched for lenses)'))
+
+args = argparser.parse_args()
+
+kb = endpoint.kbConnect()
+
+if args.instance_graph:
+    instances = kb.get_context(URIRef(args.instance_graph))
+else:
+    instances = kb
+
+if args.lens_graph:
+    lenses = kb.get_context(URIRef(args.lens_graph))
+else:
+    lenses = kb
+
+ctx = Context(fresnelGraph=lenses, instanceGraph=instances)
+box = ContainerBox(ctx)
+for r in args.resources:
+    if r == '-':
+        for line in iter(stdin.readline, ''):
+            r = line.strip()
+            if line:
+                box.append(URIRef(r))
+    else:
+        box.append(URIRef(r))
+
+box.select()
+box.portray()
+tree = box.transform()
+stdout.buffer.write(etree.tostring(tree,encoding="UTF-8",xml_declaration=True))

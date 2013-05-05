@@ -16,6 +16,7 @@ plumbing = [
     ('load', 'load a graph into the endpoint'),
     ('query', 'query the endpoint'),
     ('query-template', 'create a template of a SPARQL query'),
+    ('render', 'Render resource with Fresnel'),
     ('save', 'write a graph from the endpoint to a file'),
 ]
 workflow = [
