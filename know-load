@@ -23,6 +23,8 @@ argparser.add_argument('-t', '--content-type', nargs='+', dest='contentTypes', m
                     help='Override guessing of the correct Content-type. Defaults to application/rdf+xml when reading from STDIN. If used, the number of content-types must be one or match the number of file arguments.')
 argparser.add_argument('--incorporate', dest='incorporate', action='store_true',
                     help='Keep already existing triples of the graphs on the SPARQL endpoint')
+argparser.add_argument('--skolemize', dest='skolemize', action='store_true',
+                    help='Replace blank nodes with IRIs')
 
 args = argparser.parse_args()
 
@@ -72,6 +74,16 @@ for (url, identifier, contentType) in zip(args.urls, args.identifiers, args.cont
             contentType = f.info().get('content-type')
             contentType = contentType.split(";", 1)[0]
         f = f.read()
+
+    if args.skolemize:
+        g = Graph()
+        if isinstance(f, bytes):
+            g.parse(data=f, format=contentType)
+        else:
+            g.parse(source=f, format=contentType)
+        g = g.skolemize()
+        f = g.serialize(format='turtle')
+        contentType = 'text/turtle; charset=utf-8'
 
     print("loading as {} ...".format(identifier), end=" ")
     put_data(f, identifier, contentType, keep_existing=args.incorporate)
