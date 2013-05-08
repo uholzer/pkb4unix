@@ -7,10 +7,12 @@ import urllib
 
 # Adding some uncommon mime-types
 mimetypes.init()
+mimetypes.add_type("application/n-triples", ".nt")
 mimetypes.add_type("text/turtle", ".ttl")
 mimetypes.add_type("text/n3", ".n3")
+mimetypes.add_type("application/n-quads", ".nq")
 
-defaultAcceptHeader = "application/rdf+xml, text/turtle, text/n3"
+defaultAcceptHeader = "text/turtle; q=1, application/rdf+xml; q=0.99, application/n-triples; q=0.99, text/n3; q=0.99"
 
 def guess_contentType(url, include_charset=False):
     (t, enc) = mimetypes.guess_type(url)
