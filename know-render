@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 
 import argparse
-from sys import stdin, stdout
+from sys import stdin, stdout, stderr
+import os.path
+from subprocess import Popen, PIPE
 
 from rdflib import Graph, URIRef, Literal
 from lxml import etree
@@ -13,10 +15,14 @@ argparser = argparse.ArgumentParser(
     description=('Render Resources with Fresnel'))
 argparser.add_argument('resources', nargs='+', metavar='URI',
                     help=('Resource to be rendered. Use - to read the URIs from standard input'))
-argparser.add_argument('--instance-graph', metavar='GRAPH', dest='instance_graph',
+argparser.add_argument('-i', '--instance-graph', metavar='GRAPH', dest='instance_graph',
                     help=('Restrict instance data to this graph'))
-argparser.add_argument('--lens-graph', metavar='GRAPH', dest='lens_graph',
+argparser.add_argument('-l', '--lens-graph', metavar='GRAPH', dest='lens_graph',
                     help=('Graph containing Fresnel Lenses (if not given, all available graphs are searched for lenses)'))
+argparser.add_argument('-t', '--transform', metavar='FILE', dest='transform',
+                    help=('The location of a XSL transformation to be applied (using xsltproc) after rendering'))
+argparser.add_argument('-T', '--default-transform', dest='default_transform', action='store_true',
+                    help=('Like -t with fresneltoxhtml5.xsl from ~/.local/share/RDFFresnel, /usr/local/share/RDFFresnel or /usr/share/RDFFresnel, depending on which one exists'))
 
 args = argparser.parse_args()
 
@@ -32,6 +38,19 @@ if args.lens_graph:
 else:
     lenses = kb
 
+if args.default_transform:
+    for p in (
+        "~/.local/share/RDFFresnel/fresneltoxhtml5.xsl",
+        "/usr/local/share/RDFFresnel/fresneltoxhtml5.xsl",
+        "/usr/share/RDFFresnel/fresneltoxhtml5.xsl",
+    ):
+        os.path.expanduser(p)
+        if os.path.exists(p):
+            args.transform = p
+            break
+    print("Couldn't find default transformation", file=stderr)
+    exit(1)
+
 ctx = Context(fresnelGraph=lenses, instanceGraph=instances)
 box = ContainerBox(ctx)
 for r in args.resources:
@@ -46,4 +65,12 @@ for r in args.resources:
 box.select()
 box.portray()
 tree = box.transform()
-stdout.buffer.write(etree.tostring(tree,encoding="UTF-8",xml_declaration=True))
+
+if args.transform:
+    pipe = Popen(['xsltproc', args.transform, '-'], stdin=PIPE)
+    dest = pipe.stdin
+else:
+    dest = stdout.buffer
+
+dest.write(etree.tostring(tree,encoding="UTF-8",xml_declaration=True))
+
