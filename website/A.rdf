@@ -33,7 +33,7 @@
 
   </rdf:Description>
 
-  <doap:Project rdf:about="http://www.andonyar.com/rec/2012/pkb/project">
+  <doap:Project rdf:about="http://u.andonyar.com/projects/pkb4unix">
     <doap:name>pkb4unix</doap:name>
     <doap:created>2012-12-24</doap:created>
     <doap:shortdesc xml:lang="en">Tools to manage a personal knowledge base using RDF and SPARQL</doap:shortdesc>
@@ -47,7 +47,7 @@
             <doap:location rdf:resource="https://github.com/uholzer/pkb4unix.git"/>
         </doap:GitRepository>
     </doap:repository>
-    <progress:progress>0.1</progress:progress>
+    <progress:progress>0.2</progress:progress>
   </doap:Project>
 
 </rdf:RDF>
