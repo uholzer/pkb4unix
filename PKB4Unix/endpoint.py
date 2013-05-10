@@ -2,15 +2,7 @@ import rdflib
 import os
 import urllib
 import sys
-
-ENDPOINT_QUERY = os.environ["KNOW_ENDPOINT_QUERY"]
-ENDPOINT_UPDATE = os.environ["KNOW_ENDPOINT_UPDATE"]
-ENDPOINT_INDIRECT = os.environ["KNOW_ENDPOINT_INDIRECT"]
-PROVENANCE_GRAPH = os.environ["KNOW_PROVENANCE_GRAPH"]
-NS_GRAPH = os.environ["KNOW_NS_GRAPH"]
-
-NS_KB = rdflib.Namespace("http://www.andonyar.com/rec/2012/pkb/conf#")
-
+from .conf import *
 
 def put_data(data, identifier, contentType, keep_existing=False):
     """data can be an open file, an iterable (since Python 3.2), a bytes or a string object"""
@@ -63,8 +55,8 @@ def get_data(identifier, contentType):
     return HTTPSPARQLResponse(connection)
 
 def kbConnect():
-    kb = rdflib.ConjunctiveGraph("SPARQLUpdateStore", identifier='__UNION__')
-    kb.open(("http://localhost:8080/openrdf-sesame/repositories/pkb", "http://localhost:8080/openrdf-sesame/repositories/pkb/statements"))
+    kb = rdflib.ConjunctiveGraph("SPARQLUpdateStore")
+    kb.open((ENDPOINT_QUERY, ENDPOINT_UPDATE))
     return kb
 
 class HTTPSPARQLResponse:

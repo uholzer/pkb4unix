@@ -4,7 +4,13 @@ from sys import argv
 import os
 import textwrap
 
-KNOW_PATH = None
+try:
+    import PKB4Unix.conf
+except ImportError:
+    print("Unable to locate Python library PKB4Unix")
+    exit(1)
+
+confvars = sorted(PKB4Unix.conf.confvars, key=lambda v: v.name)
 
 rdf_tools = [
     ('rdf-construct', 'construct a graph'),
@@ -28,56 +34,11 @@ workflow = [
     ('discover', 'search the semantic web for graphs'),
 ]
 subcommands = [c for (c,info) in rdf_tools + plumbing + workflow]
-relevant_env = {
-    'KNOW_ENDPOINT_QUERY': {
-        'shortopt': '-Q',
-        'longopt': '--know-endpoint-query',
-        'metavar': 'URL',
-        'default': "http://localhost:8080/openrdf-sesame/repositories/pkb", 
-        'help': "URL of the SPARQL endpoint for queries"
-    },
-    'KNOW_ENDPOINT_UPDATE': {
-        'shortopt': '-U',
-        'longopt': '--know-endpoint-update',
-        'metavar': 'URL',
-        'default': "http://localhost:8080/openrdf-sesame/repositories/pkb/statements",
-        'help': "URL of the SPARQL endpoint for updates"
-    },
-    'KNOW_ENDPOINT_INDIRECT': {
-        'shortopt': '-I',
-        'longopt': '--know-endpoint-indirect',
-        'metavar': 'URL',
-        'default': "http://localhost:8080/openrdf-sesame/repositories/pkb/rdf-graphs/service",
-        'help': "URL of the SPARQL endpoint's inditirect graph store"
-    },
-    'KNOW_PROVENANCE_GRAPH': {
-        'shortopt': '-P',
-        'longopt': '--know-provenance-graph',
-        'metavar': 'URI',
-        'default': "kb:provenance",
-        'help': "URI of the graph storing provenance information"
-    },
-    'KNOW_NS_GRAPH': {
-        'shortopt': '-N',
-        'longopt': '--know-ns-graph',
-        'metavar': 'URI',
-        'default': "kb:namespaces",
-        'help': "URI of the graph containing information about namespaces"
-    },
-    'KNOW_PATH': {
-        'shortopt': '-E',
-        'longopt': '--know-path',
-        'metavar': 'DIR',
-        'default': KNOW_PATH,
-        'help': "Location of executables (gets added to PATH)"
-    }
-}
 
 scriptname = argv[0].split("/")[-1]
 arglist = argv[1:]
-opts = { info['shortopt']: env for (env, info) in relevant_env.items() }
-opts.update({ info['longopt']: env for (env, info) in relevant_env.items() })
-env_changes = {}
+opts = { var.cmdline_short: var for var in confvars if var.cmdline_short }
+opts.update({ var.cmdline_long: var for var in confvars if var.cmdline_long })
 
 do_help = False
 while arglist and (arglist[0] in opts or arglist[0] in {"--help", "help", "-h"}):
@@ -85,9 +46,13 @@ while arglist and (arglist[0] in opts or arglist[0] in {"--help", "help", "-h"})
         do_help = True
         arglist = arglist[1:]
     else:
-        env_changes[opts[arglist[0]]] = arglist[1]
-        val = arglist[1]
+        var = opts[arglist[0]]
+        var.set(arglist[1], 'command line')
         arglist = arglist[2:]
+
+# Applying changes to the environment
+for var in confvars:
+    var.setenv()
 
 def help_entryindent(key, info, nlfirst=False):
     if nlfirst:
@@ -114,14 +79,17 @@ if do_help:
     print(textwrap.dedent('''
         Knowledge Base Toolkit
 
-        usage: {} [-I URL] [-Q URL] [-U URL] [-N URI] [-E DIR] [-P URI]
+        usage: {} {}
                SUBCOMMAND ...
-    '''.format(scriptname)))
+    '''.format(
+        scriptname, 
+        ' '.join((' [-{} {}]'.format(var.cmdline_short, var.metavar) for var in confvars if var.cmdline_short))
+    )))
     print("Optional arguments:")
-    for env in relevant_env:
+    for var in (v for v in confvars if v.fromcmdline):
         print(help_entryindent(
-            "{shortopt} {metavar}, {longopt} {metavar}".format(**relevant_env[env]),
-            relevant_env[env]['help'],
+            "{v.shortopt} {v.metavar}, {v.longopt} {v.metavar}".format(v=var),
+            var.help,
             nlfirst=True
         ))
     print("")
@@ -141,23 +109,8 @@ if do_help:
         print(help_entryindent(c, info))
     print("")
     print("Current Configuration:")
-
-# Applying the requested changes to the environment
-# (and if do_help, print the values)
-for (k, info) in sorted(relevant_env.items()):
-    if k in env_changes:
-        value = env_changes[k]
-        origin = "command line option {}".format(relevant_env[k]['longopt'])
-    elif k in os.environ:
-        value = os.environ[k]
-        origin = "environment variable {}".format(k)
-    else:
-        value = info['default']
-        origin = "default"
-    if value is not None:
-        os.environ[k] = value
-    if do_help:
-        print("{}:\n    {}\n    (by {})".format(k, value if value is not None else "(not set)", origin))
+    for var in confvars:
+        print("{}:\n    {}\n    (by {})".format(var.name, var.value or "(not set)", var.blame))
 
 if do_help:
     print("")
@@ -175,12 +128,6 @@ if arglist[0] not in subcommands:
     exit(1)
 
 ################
-
-# Adding KNOW_PATH to front of PATH
-# The know-* scripts expect all know-* scripts to be in the path.
-# The function run above does so too.
-if "KNOW_PATH" in os.environ and not os.environ["PATH"].startswith(os.environ["KNOW_PATH"]+":"):
-    os.environ["PATH"] = "{}:{}".format(os.environ["KNOW_PATH"],os.environ["PATH"])
 
 executable = 'know-'+arglist[0]
 args = arglist[1:]
