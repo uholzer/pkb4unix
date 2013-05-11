@@ -2,7 +2,7 @@ import re
 import itertools
 from collections import defaultdict, namedtuple
 import subprocess
-from rdflib import Graph, Literal, BNode, URIRef
+from rdflib import util, Graph, Literal, BNode, URIRef
 
 COUNT_ONEORNONE = -1
 COUNT_ONEORMORE = -2
@@ -122,9 +122,10 @@ class TerminalSection(Section):
 
     def ask_LITERAL(self, g, sections, var, prompt):
         answer = self.input(prompt)
-        # TODO: Let the user set datatype or language.
-        
-        return Literal(answer, lang=var.langhint, datatype=var.datatypehint)
+        if answer.startswith('"') or answer.startswith("'"):
+            return util.from_n3(answer)
+        else:
+            return Literal(answer, lang=var.langhint, datatype=var.datatypehint)
 
     def ask_BNODE(self, g, sections, var, prompt):
         # In order to implement casshints and construction,
