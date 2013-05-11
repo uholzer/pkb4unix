@@ -84,7 +84,7 @@ class TerminalSection(Section):
                 
             for i in r:
                 val = askfunc(g, sections, var, self.prompt(var.nodetype, i, var.count, var.prompt))
-                if not str(val): # val itself could be false: "false"^^xsd:bool
+                if val is None or not str(val): # val itself could be false: "false"^^xsd:bool
                     break
                 varvalues[var.name].append(val)
 
@@ -103,8 +103,17 @@ class TerminalSection(Section):
 
         return mainvar_value
 
-    def ask_NODE(self, g, sections, var):
-        raise NotImplemented()
+    def ask_NODE(self, g, sections, var, prompt):
+        answer = self.input(prompt)
+        if answer.startswith("c") and var.classhint and var.classhint in sections:
+            s = sections[answer[1:].strip()]
+            node = s.construct(g, sections, None)
+            print("back to {}".format(self.name), file=self.out)
+            return node
+        elif answer:        
+            return util.from_n3(answer)
+        else:
+            return None
 
     def ask_RESOURCE(self, g, sections, var, prompt):
         if var.classhint and var.classhint in sections:
