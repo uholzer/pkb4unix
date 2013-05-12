@@ -83,12 +83,12 @@ if do_help:
                SUBCOMMAND ...
     '''.format(
         scriptname, 
-        ' '.join((' [-{} {}]'.format(var.cmdline_short, var.metavar) for var in confvars if var.cmdline_short))
+        ' '.join(('[{} {}]'.format(var.cmdline_short, var.metavar) for var in confvars if var.cmdline_short))
     )))
     print("Optional arguments:")
     for var in (v for v in confvars if v.fromcmdline):
         print(help_entryindent(
-            "{v.shortopt} {v.metavar}, {v.longopt} {v.metavar}".format(v=var),
+            "{v.cmdline_short} {v.metavar}, {v.cmdline_long} {v.metavar}".format(v=var),
             var.help,
             nlfirst=True
         ))
