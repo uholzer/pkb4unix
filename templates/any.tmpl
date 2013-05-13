@@ -1,0 +1,13 @@
+[graph] ?g An arbitrary graph
+
+RESOURCE + ?subject [statement] The subject
+
+[statement] ?subject A statement with subject
+
+RESOURCE 1 ?predicate the predicate
+NODE     1 ?object    the object
+
+INSERT {
+    ?subject ?predicate ?object .
+}
+

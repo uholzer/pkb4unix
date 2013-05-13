@@ -72,7 +72,10 @@ INSERT {
     <quads>
 }
     Lists the tripples to be inserted into the graph. The syntax of
-    <quads> is the same as Quads in the SPARQL syntax.
+    <quads> is the same as Quads in the SPARQL syntax. If a section
+    does not contains an INSERT instruction, it will not add any
+    triples. This is still useful if it calls other sections to
+    construct.
 
 Example:
 

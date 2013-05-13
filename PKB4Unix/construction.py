@@ -61,7 +61,10 @@ class TerminalSection(Section):
         print("=== {}".format(self.name), file=self.out)
         varvalues = defaultdict(list)
 
-        print("I will insert the following triples:\n"+self.quads, file=self.out)
+        if self.quads:
+            print("I will insert the following triples:\n"+self.quads, file=self.out)
+        else:
+            print("No triples will be inserted for this section", file=self.out)
 
         if not mainvar_value:
             mainvar_value = self.input("CONSTRUCTING {}> ".format(self.mainvariable.prompt))
@@ -88,15 +91,16 @@ class TerminalSection(Section):
                     break
                 varvalues[var.name].append(val)
 
-        where_part = ""
-        for (var, values) in varvalues.items():
-            values_list = " ".join("({})".format(v.n3()) for v in values)
-            where_part += "VALUES ({}) {{ {} }}\n".format(str(var), values_list)
-        q = "INSERT {{\n{}}}\nWHERE {{\n{}}}".format(self.quads, where_part)
+        if self.quads:
+            where_part = ""
+            for (var, values) in varvalues.items():
+                values_list = " ".join("({})".format(v.n3()) for v in values)
+                where_part += "VALUES ({}) {{ {} }}\n".format(str(var), values_list)
+            q = "INSERT {{\n{}}}\nWHERE {{\n{}}}".format(self.quads, where_part)
 
-        print("Adding tribles with SPARQL:\n"+q, file=self.out)
+            print("Adding tribles with SPARQL:\n"+q, file=self.out)
 
-        g.update(q, initNs=self.ns)
+            g.update(q, initNs=self.ns)
 
         print("=== {}".format("done"), file=self.out)
         print("", file=self.out)
