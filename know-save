@@ -15,7 +15,7 @@ argparser.add_argument('-f', '--file', nargs='+', metavar='FILE', dest='files',
                     help='Override file name. - denotes STDOUT. If used, the number of identifiers must match the number of identifier arguments.')
 argparser.add_argument('-t', '--content-type', nargs='+', dest='contentTypes', metavar='TYPE',
                     help=('Set content-type to be used in the Accept-header of the SPARQL request. '
-                    'For writing to STDOUT, it defaults to "application/rdf+xml" If used, the number of content-types must be one or match the number of identifier arguments.'))
+                    'For writing to STDOUT, it defaults to DEFAULT_FROMAT. If used, the number of content-types must be one or match the number of identifier arguments.'))
 
 args = argparser.parse_args()
 
@@ -32,7 +32,7 @@ if args.contentTypes and not (len(args.contentTypes) == len(args.identifiers)):
     else:
         print("--content-type must have one or as many arguments as there are graphs to save")
 elif not args.contentTypes:
-    args.contentTypes = [iotools.guess_contentType(ident) for ident in args.files]
+    args.contentTypes = [DEFAULT_FORMAT if ident=='-' else iotools.guess_contentType(ident) for ident in args.files]
 
 for (filename, uri, contentType) in zip(args.files, args.identifiers, args.contentTypes):
     print("Saving {} to {} ...".format(uri, "STDOUT" if filename == '-' else filename))

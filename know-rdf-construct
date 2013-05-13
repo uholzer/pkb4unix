@@ -5,6 +5,7 @@ import sys
 
 from rdflib import Graph, Literal, BNode, URIRef
 from PKB4Unix.construction import *
+from PKB4Unix.conf import *
 
 argparser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -145,5 +146,5 @@ if args.section:
 
 firstsection.construct(g, sections)
 
-g.serialize(dest)
+g.serialize(dest, format=DEFAULT_FORMAT)
 

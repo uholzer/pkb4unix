@@ -52,6 +52,16 @@ class ConfVarInfo():
 
 confvars = [
     ConfVarInfo(
+        'DEFAULT_FORMAT',
+        'F',
+        'MIME',
+        "mime-type of the serialization format to be used by default",
+        lambda value: value,
+        "text/turtle",
+        True,
+        True,
+    ),
+    ConfVarInfo(
         'ENDPOINT_QUERY',
         'Q',
         'URL',

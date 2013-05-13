@@ -9,6 +9,7 @@ from io import BytesIO
 from rdflib import Graph, URIRef
 from PKB4Unix.iotools import absurl, guess_contentType, defaultAcceptHeader
 from PKB4Unix.endpoint import put_data
+from PKB4Unix.conf import *
 
 argparser = argparse.ArgumentParser(description='Load a graph into the SPARQL endpoint')
 argparser.add_argument('urls', nargs='+', metavar='URL',
@@ -20,7 +21,7 @@ argparser.add_argument('urls', nargs='+', metavar='URL',
 argparser.add_argument('-i', '--identifier', nargs='+', metavar='URI', dest='identifiers',
                     help='Override graph name. Must be used when reading from STDIN. If used, the number of identifiers must match the number of file arguments.')
 argparser.add_argument('-t', '--content-type', nargs='+', dest='contentTypes', metavar='TYPE',
-                    help='Override guessing of the correct Content-type. Defaults to application/rdf+xml when reading from STDIN. If used, the number of content-types must be one or match the number of file arguments.')
+                    help='Override guessing of the correct Content-type. If used, the number of content-types must be one or match the number of file arguments.')
 argparser.add_argument('--incorporate', dest='incorporate', action='store_true',
                     help='Keep already existing triples of the graphs on the SPARQL endpoint')
 argparser.add_argument('--skolemize', dest='skolemize', action='store_true',
@@ -57,13 +58,13 @@ for (url, identifier, contentType) in zip(args.urls, args.identifiers, args.cont
         if not identifier:
             identifier = url
         if not contentType:
-            contentType = 'application/rdf+xml'
+            contentType = DEFAULT_FORMAT
     elif url.startswith("file:"):
         f = open(iotools.url2localpath(absurl))
         if not identifier:
             identifier = url
         if not contentType:
-            contentType = iotools.guess_contentType(url, True) or 'application/rdf+xml'
+            contentType = iotools.guess_contentType(url, True) or DEFAULT_FORMAT
     else:
         req = urllib.request.Request(absurl(url))
         req.add_header("Accept: ", contentType or defaultAcceptHeader)
