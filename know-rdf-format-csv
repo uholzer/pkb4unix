@@ -31,7 +31,7 @@ fd = sys.stdin.fileno()
 # Reopen stdin with newline='', because csv.reader requires it
 csvin = open(fd, mode="r", closefd=False, newline='')
 
-reader = csv.reader(csvin, delimiter=',', quotechar='"', skipinitialspace=True)
+reader = csv.reader(csvin, dialect='unix', delimiter='|', skipinitialspace=True)
 text = ''
 for row in reader:
     row = list(row)

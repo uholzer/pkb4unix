@@ -6,6 +6,7 @@ import urllib
 import argparse
 import http.client
 from subprocess import Popen, PIPE
+from collections import defaultdict
 
 from rdflib import Graph, URIRef
 
@@ -29,12 +30,59 @@ def query_dbpedia():
     query = urllib.parse.urlencode({k: v for (k,v) in {'QueryString': args.keyword, 'QueryClass': args.cls, 'MaxHits': args.limit}.items() if v})
     url = "http://lookup.dbpedia.org/api/search.asmx/KeywordSearch?{}".format(query)
     response = urllib.request.urlopen(url)
+
+    import xml.parsers.expat
+
+    depth = 0
+    collect_to = None
+    data = None
+    writer = None
+
+    def start_element(name, attrs):
+        nonlocal data
+        nonlocal collect_to
+        nonlocal depth
+        name = name.split(':')[-1]
+        depth += 1
+        if depth == 2 and name == 'Result':
+            data = defaultdict(str)
+        elif depth == 3 and name in ('Label', 'URI', 'Description'):
+            collect_to = name
+    def end_element(name):
+        nonlocal data
+        nonlocal collect_to
+        nonlocal depth
+        name = name.split(':')[-1]
+        if depth == 2 and name == 'Result':
+            assert not collect_to
+            for k in data.keys():
+                data[k] = data[k].strip()
+                data[k] = data[k].replace('\\', '\\\\')
+                data[k] = data[k].replace('\n', '\\n')
+                data[k] = data[k].replace('|', '\|')
+            writer(('|'.join((data['Label'],data['URI'],data['Description'])) + "\n").encode('UTF-8'))
+            data = None
+        elif depth == 3:
+            collect_to = None
+        depth -= 1
+    def char_data(chars):
+        if collect_to:
+            data[collect_to] += chars
+
+    p = xml.parsers.expat.ParserCreate()
+
+    p.StartElementHandler = start_element
+    p.EndElementHandler = end_element
+    p.CharacterDataHandler = char_data
+
     if args.raw_uri:
-        formatter_opts = '-f ignore verbatim ignore n'
+        formatter_opts = ['-f', 'ignore', 'verbatim', 'ignore', 'n']
     else:
-        formatter_opts = '-f title t uri' + (' paragraph' if args.show_description else ' ignore') + ' n'
-    with Popen(["xsltproc dbpedia_api2csv.xsl - | ./know-rdf-format-csv " + formatter_opts], stdin=PIPE, shell=True) as proc:
-        for x in iter(lambda: response.read(4096), b''): proc.stdin.write(x)
+        formatter_opts = ['-f', 'title', 't', 'uri', 'paragraph' if args.show_description else 'ignore', 'n']
+
+    with Popen(["know-rdf-format-csv"] + formatter_opts, stdin=PIPE) as proc:
+        writer = proc.stdin.write
+        p.ParseFile(response)
 
 services = { "dbpedia": query_dbpedia }
 
