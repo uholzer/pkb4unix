@@ -1,0 +1,21 @@
+NS foaf: http://xmlns.com/foaf/0.1/
+NS xsd:  http://www.w3.org/2001/XMLSchema#
+
+[foaf:Person] ?person A person
+
+LITERAL  1 ?name Name
+RESOURCE 1 ?mbox Mail Box (of the form mailto:name@host)
+RESOURCE 1 ?phone Phone number (of the form tel:+dd-dd-ddd-dd-dd)
+RESOURCE * ?topic_interest Interest
+RESOURCE ? ?homepage Homepage
+RESOURCE * ?knows [foaf:Person] Knows
+
+INSERT {
+    ?person a foaf:Person ;
+            foaf:mbox ?mbox ;
+            foaf:phone ?phone ;
+            foaf:topic_interest ?topic_interest ;
+            foaf:homepage ?homepage ;
+            foaf:knows ?knows .
+}
+

@@ -1,0 +1,29 @@
+NS softw: http://www.andonyar.com/rec/2012/pkb/software#
+NS doap:  http://usefulinc.com/ns/doap#
+
+[doap:Project] ?p A project
+
+LITERAL  1 ?name        project name
+LITERAL  ? ?description project description
+RESOURCE ? ?homepage    project homepage
+RESOURCE * ?realizes    Something the software implements or achieves
+
+INSERT {
+    ?p a doap:Project ;
+       doap:name ?name ;
+       doap:description ?description ;
+       doap:homepage ?homepage ;
+       softw:realizes ?realizes .
+}
+
+[softw:Interface] ?if A (maybe standardized) Interface Definition
+
+LITERAL ? ?title Interface title
+LITERAL 1 ?description Interface description
+
+INSERT {
+    ?if a softw:Interface ;
+        dc:title ?title ;
+        dc:description ?description .
+}
+
