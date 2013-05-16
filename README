@@ -28,10 +28,11 @@ directory to your PATH.
 
 === Environment Variables ===
 
-The scripts know-* need a few environment variables to be set.
-You are advised to run the scripts through the wapper `know`. It will
-set the environment variables to their defaults if not already
-present.
+Most scripts know-* need a few environment variables to be set.
+You are advised to run the scripts through the wrapper `know`. It
+allows you to easily set these variables using command line options.
+Use `know help` to find out what options are required and to which
+value they are currently set.
 
 === Usage ===
 
