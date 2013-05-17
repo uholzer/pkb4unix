@@ -7,7 +7,8 @@ import argparse
 import http.client
 from subprocess import Popen, PIPE
 
-from rdflib import Graph, URIRef
+from rdflib import Graph, URIRef, Literal
+from PKB4Unix import endpoint
 
 argparser = argparse.ArgumentParser(description='Find and Load Graphs from the Semantic Web',
     epilog='''Currently this just fetches the uri with `know load`.
@@ -16,12 +17,56 @@ argparser = argparse.ArgumentParser(description='Find and Load Graphs from the S
 )
 argparser.add_argument('uris', nargs='+', metavar='URI',
                        help=('Resource about which you want to find information'))
+argparser.add_argument('-s', '--service', nargs='*', metavar='service', dest='service',
+                       default=['fetch','sindice'],
+                       help="""Service to be queried. Curretnly, only 'fetch' and 'sindice' are supported.
+                               By default, all known services are queried.
+                               'fetch' tries to download the URI directly.
+                               'sindice' queries Sindice using API version 3.""")
+argparser.add_argument('-l', '--limit', dest='limit', metavar='L', type=int, default=10,
+                       help='Set maximal number of graphs to fetch per service')
+#argparser.add_argument('-L', '--size-limit', dest='size_limit', metavar='L', type=int, default=10
+#                      help='Restrict size of files to be fetched to this size')
+
+def fetch(uri):
+    if uri.startswith("http:"):
+        print("Fetch {}".format(uri))
+        subprocess.call(["know-load", uri])
+    else:
+        print("Not fetching {}".format(uri))
+
+def sindice(uri):
+    print("Sindice {}".format(uri))
+    query = urllib.parse.urlencode({'q': uri})
+    query_uri = URIRef("http://api.sindice.com/v3/search?{}".format(query))
+    print("Query {}".format(str(query_uri)))
+    # Force the Accept header to 'application/rdf+xml', otherwise
+    # Sindice ignores it.
+    subprocess.call(["know-load", str(query_uri), '-t', 'application/rdf+xml', "-i", str(query_uri)])
+    kb = endpoint.kbConnect()
+    result = kb.get_context(query_uri)
+    documents = result.query("""
+        PREFIX : <http://sindice.com/vocab/search#>
+        SELECT ?document
+        WHERE {
+            ?result a :Result .
+            ?result :link ?document .
+            ?result :rank ?rank .
+        }
+        ORDER BY ?rank
+        LIMIT """+str(args.limit))
+    for d in documents:
+        print("Loading {}".format(d.document))
+        subprocess.call(["know-load", d.document])
 
 args = argparser.parse_args()
 
 for uri in args.uris:
-    if uri.startswith("http:"):
-        subprocess.call(["know-load", uri])
-    else:
-        print("Couldn't find anything for {}.".format(uri))
+    for service in args.service:
+        if service == 'fetch':
+            fetch(uri)
+        elif service == 'sindice':
+            sindice(uri)
+        else:
+            print("Unknown service '{}'".format(service), file=sys.stderr)
 
