@@ -8,6 +8,7 @@ from .conf import *
 
 # Adding some uncommon mime-types
 mimetypes.init()
+mimetypes.add_type("application/rdf+xml", ".rdf")
 mimetypes.add_type("application/n-triples", ".nt")
 mimetypes.add_type("text/turtle", ".ttl")
 mimetypes.add_type("text/n3", ".n3")
@@ -45,6 +46,6 @@ def absurl(url, base=None):
     but is also an absolute URI and has to be interpreted as such."""
     base = base if base else os.path.abspath(".")
     base = "file://" + urllib.request.pathname2url(base)
-    url = urllib.parse.quote_plus(url, safe='/:%')
+    url = urllib.parse.quote_plus(url, safe=":/?#[]@!$&'()*+,;=-._~%")
     if base[-1] != "/": base += "/"
     return urllib.parse.urljoin(base, url)

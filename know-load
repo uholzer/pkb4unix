@@ -67,7 +67,7 @@ for (url, identifier, contentType) in zip(args.urls, args.identifiers, args.cont
             contentType = iotools.guess_contentType(url, True) or DEFAULT_FORMAT
     else:
         req = urllib.request.Request(absurl(url))
-        req.add_header("Accept: ", contentType or defaultAcceptHeader)
+        req.add_header("Accept", contentType or defaultAcceptHeader)
         f = urllib.request.urlopen(req)
         if not identifier:
             identifier = f.geturl()
