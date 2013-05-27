@@ -1,11 +1,80 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-from rdflib import Graph
+import argparse
+from rdflib import Graph, URIRef
 import PKB4Unix.endpoint
+from PKB4Unix.iotools import absurl
+
+def argToURIRef(s):
+    return URIRef(absurl(s))
+
+def create():
+    pass
+
+def drop(opt):
+    qparts = {}
+    if opt.default:
+        qparts['graph'] = 'DEFAULT'
+    elif opt.named:
+        qparts['graph'] = 'NAMED'
+    elif opt.all:
+        qparts['graph'] = 'ALL'
+    else:
+        qparts['graph'] = 'GRAPH {}'.format(opt.graph.n3())
+    qparts['silent'] = 'SILENT' if args.silent else ''
+    q = "DROP {0[silent]} {0[graph]}".format(qparts)
+    kb.update(q)
+
+def copy():
+    pass
+
+def move():
+    pass
+
+def add():
+    pass
+
+argparser = argparse.ArgumentParser(
+    description='Graph Management'
+)
+
+subparsers = argparser.add_subparsers(help='Action')
+subparser = subparsers.add_parser('create', help='Create a graph')
+subparser.add_argument('graph', type=argToURIRef, metavar="URI", help='Graph identifier')
+subparser.add_argument('-s', '--silent', action='store_true', dest='silent', help="Instruct the endpoint to not report failure")
+subparser.set_defaults(func=create)
+
+subparser = subparsers.add_parser('drop', help='Drop a graph')
+subparser.add_argument('graph', type=argToURIRef, metavar="URI", nargs='?', help='Graph identifier')
+subparser.add_argument('-s', '--silent',  action='store_true', dest='silent',  help="Instruct the endpoint to not report failure")
+subparser.add_argument('-d', '--default', action='store_true', dest='default', help="Drop the default graph")
+subparser.add_argument('-n', '--named',   action='store_true', dest='named',   help="Drop all named graphs")
+subparser.add_argument('-a', '--all',     action='store_true', dest='all',     help="Drop all graphs")
+subparser.set_defaults(func=drop)
+
+subparser = subparsers.add_parser('copy', help='Copy a graph, removing existing triples of the destination graph')
+subparser.add_argument('fromgraph', type=argToURIRef, metavar="URI", help='Graph identifier')
+subparser.add_argument('tograph', type=argToURIRef, metavar="URI", help='Graph identifier')
+subparser.add_argument('-s', '--silent', action='store_true', dest='silent', help="Instruct the endpoint to not report failure")
+subparser.set_defaults(func=copy)
+
+subparser = subparsers.add_parser('move',
+    help='''Move a graph, removing all existing triples of the
+    destination graph, dropping the source graph afterwards.'''
+)
+subparser.add_argument('fromgraph', type=argToURIRef, metavar="URI", help='Graph identifier')
+subparser.add_argument('tograph', type=argToURIRef, metavar="URI", help='Graph identifier')
+subparser.add_argument('-s', '--silent', action='store_true', dest='silent', help="Instruct the endpoint to not report failure")
+subparser.set_defaults(func=move)
+
+subparser = subparsers.add_parser('add', help='Insert all triples from the source graph into the destination graph')
+subparser.add_argument('fromgraph', type=argToURIRef, metavar="URI", help='Graph identifier')
+subparser.add_argument('tograph', type=argToURIRef, metavar="URI", help='Graph identifier')
+subparser.add_argument('-s', '--silent', action='store_true', dest='silent', help="Instruct the endpoint to not report failure")
+subparser.set_defaults(func=add)
+
+args = argparser.parse_args()
 
 kb = PKB4Unix.endpoint.kbConnect()
-
-ctxts = { g.identifier for g in kb.contexts() }
-
-for ctx in ctxts: print(ctx)
+args.func(args)
 
