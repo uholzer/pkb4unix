@@ -1,0 +1,114 @@
+#!/usr/bin/python2
+
+import sys
+import argparse
+import hashlib
+from Queue import Queue
+
+import xapian # requires Python 2
+import rdflib
+from rdflib import Namespace
+
+XI = Namespace('http://www.andonyar.com/rec/2012/pkb/voc/fulltext-index#')
+
+
+class SinkStore(rdflib.store.Store):
+    """Always empty fake store invoking a callback when a triple is added"""
+
+    context_aware = True
+    formula_aware = True # required because of a bug in the turtle parser
+
+    def __init__(self, new_triples_callback):
+        super(SinkStore, self).__init__()
+        self.new_triples_callback = new_triples_callback
+
+    def add(self, (subject, predicate, object), context, quoted=False):
+        self.new_triples_callback([(subject, predicate, object, context)])
+
+    def addN(self, quads):
+        self.new_triples_callback(quads)
+
+
+class RDFIndexer(object):
+
+    def __init__(self, dbpath):
+        self.db = xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
+
+        self.termgenerator = xapian.TermGenerator()
+        self.current_doc = None
+        self.current_idterm = None
+        self.current_subject = None
+        self.current_graph = None
+
+    def index_quads(self, quads):
+        for q in quads:
+            doc = self.select_doc(q[0], q[3].identifier)
+            if isinstance(q[2], rdflib.Literal) and q[2].language:
+                self.termgenerator.set_stemmer(xapian.Stem(q[2].language))
+            else:
+                self.termgenerator.set_stemmer(xapian.Stem("none"))
+            if q[1] == XI.title:
+                title = unicode(q[2])
+                self.termgenerator.index_text(title, 1, 'S')
+                self.termgenerator.index_text(title)
+                self.termgenerator.increase_termpos()
+                data = doc.get_data().decode('UTF-8')
+                descr = data.split(u"\n\n", 1)[1] if u"\n\n" in data else u""
+                data = u"{}\n\n{}".format(title, descr)
+                doc.set_data(data.encode('UTF-8'))
+            elif q[1] == XI.description:
+                descr = unicode(q[2])
+                self.termgenerator.index_text(descr)
+                self.termgenerator.increase_termpos()
+                data = doc.get_data().decode('UTF-8')
+                title = data.split(u"\n\n", 1)[0]
+                data = u"{}\n\n{}".format(title, descr)
+                doc.set_data(data.encode('UTF-8'))
+            elif q[1] == XI.text:
+                self.termgenerator.index_text(unice(q[1]))
+                self.termgenerator.increase_termpos()
+
+    def select_doc(self, subject, graph):
+        if self.current_doc and self.current_subject == subject and self.current_graph == graph:
+            return self.current_doc
+        if self.current_doc:
+            self.commit()
+        identifier = hashlib.sha224(u"{} {}".format(unicode(subject), unicode(graph)).encode('UTF-8')).hexdigest()
+        idterm = unicode("Q" + identifier)
+        try:
+            plitem = self.db.postlist(idterm).next()
+            doc = self.db.get_document(plitem.docid)
+        except StopIteration:
+            doc = xapian.Document()
+            doc.add_boolean_term(idterm)
+        doc.add_value(0, unicode(subject))
+        doc.add_value(1, unicode(graph))
+        self.termgenerator.set_document(doc)
+        self.current_doc = doc
+        self.current_idterm = idterm
+        self.current_subject = subject
+        self.current_graph = graph
+        return self.current_doc
+
+    def commit(self):
+        if self.current_doc:
+            self.db.replace_document(self.current_idterm, self.current_doc)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Index Resources from RDF graphs with Xapian.')
+    parser.add_argument(
+            'db', type=str,
+            help='Xapian database'
+    )
+    parser.add_argument(
+            'graph', type=str,
+            help='Name of Graph'
+    )
+    args = parser.parse_args()
+
+    indexer = RDFIndexer(args.db)
+    cg = rdflib.ConjunctiveGraph(store=SinkStore(indexer.index_quads))
+    cg.parse(source=sys.stdin, format="turtle", publicID=args.graph)
+    indexer.commit()
+

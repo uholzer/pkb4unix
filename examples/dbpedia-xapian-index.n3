@@ -1,0 +1,22 @@
+@prefix rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dct:      <http://purl.org/dc/terms/> .
+@prefix xi:       <http://www.andonyar.com/rec/2012/pkb/voc/fulltext-index#> .
+@prefix :         <#> .
+
+{ 
+    ?R rdfs:label ?title .
+}
+=>
+{
+    ?R xi:title ?title .
+} .
+
+{ 
+    ?R <http://dbpedia.org/ontology/abstract> ?abstract .
+}
+=>
+{
+    ?R xi:description ?abstract .
+} .
+

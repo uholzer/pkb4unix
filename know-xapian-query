@@ -1,0 +1,54 @@
+#!/usr/bin/python2
+
+import sys
+import argparse
+import hashlib
+
+import xapian # requires Python 2
+import rdflib
+
+class RDFSearch(object):
+
+    def __init__(self, dbpath):
+        self.db = xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
+
+    def query(self, querystring):
+        # Set up a QueryParser with a stemmer and suitable prefixes
+        queryparser = xapian.QueryParser()
+        queryparser.set_stemmer(xapian.Stem("en"))
+        queryparser.set_stemming_strategy(queryparser.STEM_SOME)
+        #queryparser.add_prefix("title", "S")
+        #queryparser.add_prefix("description", "XD")
+
+        # And parse the query
+        query = queryparser.parse_query(querystring)
+
+        # Use an Enquire object on the database to run the query
+        enquire = xapian.Enquire(self.db)
+        enquire.set_query(query)
+
+        return enquire
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Index Resources from RDF graphs with Xapian.')
+    parser.add_argument(
+            'db', type=str,
+            help='Xapian database'
+    )
+    parser.add_argument(
+            'query', type=str,
+            help='Query String'
+    )
+    args = parser.parse_args()
+
+    search = RDFSearch(args.db)
+    enquire = search.query(args.query)
+
+    matches = []
+    for match in enquire.get_mset(0, 10):
+        print u"<{}>".format(match.document.get_value(0))
+        print match.document.get_data()
+        print ""
+
+
+
