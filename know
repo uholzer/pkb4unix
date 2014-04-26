@@ -13,10 +13,10 @@ except ImportError:
 confvars = sorted(PKB4Unix.conf.confvars, key=lambda v: v.name)
 
 rdf_tools = [
-    ('rdf-construct', 'construct a graph'),
-    ('rdf-edit', 'read from stdin, edit, print on stdout'),
-    ('rdf-format-csv', 'csv formatter'),
-    ('rdf-uuid', 'generate a urn:uuid URI')
+    ('construct', 'construct a graph'),
+    ('edit', 'read from stdin, edit, print on stdout'),
+    ('format-csv', 'csv formatter'),
+    ('uuid', 'generate a urn:uuid URI')
 ]
 plumbing = [
     ('sparql-load', 'load a graph into the endpoint'),
