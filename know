@@ -19,19 +19,19 @@ rdf_tools = [
     ('rdf-uuid', 'generate a urn:uuid URI')
 ]
 plumbing = [
-    ('load', 'load a graph into the endpoint'),
-    ('query', 'query the endpoint'),
-    ('query-template', 'create a template of a SPARQL query'),
-    ('render', 'Render resource with Fresnel'),
-    ('save', 'write a graph from the endpoint to a file'),
+    ('sparql-load', 'load a graph into the endpoint'),
+    ('sparql-query', 'query the endpoint'),
+    ('sparql-query-template', 'create a template of a SPARQL query'),
+    ('sparql-render', 'Render resource with Fresnel'),
+    ('sparql-save', 'write a graph from the endpoint to a file'),
 ]
 workflow = [
-    ('construct', 'constructing a graph based on templates'),
-    ('graph', 'graph manipulations'),
-    ('merge', 'merge two graphs in the endpoint'),
-    ('rm', 'delete a graph from the endpoint'),
+    ('sparql-construct', 'constructing a graph based on templates'),
+    ('sparql-graph', 'graph manipulations'),
+    ('sparql-merge', 'merge two graphs in the endpoint'),
+    ('sparql-rm', 'delete a graph from the endpoint'),
     ('search', 'search the semantic web for resources'),
-    ('discover', 'search the semantic web for graphs'),
+    ('sparql-discover', 'search the semantic web for graphs'),
 ]
 subcommands = [c for (c,info) in rdf_tools + plumbing + workflow]
 
