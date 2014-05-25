@@ -1,0 +1,39 @@
+#!/usr/bin/python3
+
+import sys
+import argparse
+import functools
+
+import rdflib
+
+argparser = argparse.ArgumentParser(
+        description='Merge RDF graphs',
+        epilog="""
+            The current implementation loads all graphs to be merged into memory. A
+            future implementation will reduce this to O(nlogn) where n is the total
+            number of blank nodes used in the graphs.
+        """)
+argparser.add_argument('graphs', metavar='G', nargs='+',
+        help="Filenames of graphs to be merged, '-' for standard input")
+
+args = argparser.parse_args()
+
+stdin_fd = sys.stdin.fileno()
+stdin = open(stdin_fd, mode="rb", closefd=False)
+stdout_fd = sys.stdout.fileno()
+stdout = open(stdout_fd, mode="wb", closefd=False)
+
+def parse(g, filename):
+    if filename == '-':
+        f = stdin
+    else:
+        f = open(filename, "rb")
+    g.parse(source=f, format='turtle')
+    f.close()
+    return g
+
+merged = functools.reduce(parse, args.graphs, rdflib.Graph())
+
+merged.serialize(destination=stdout, format='nt')
+
+

@@ -13,6 +13,7 @@ except ImportError:
 confvars = sorted(PKB4Unix.conf.confvars, key=lambda v: v.name)
 
 rdf_tools = [
+    ('merge', 'merge graphs'),
     ('construct', 'construct a graph'),
     ('edit', 'read from stdin, edit, print on stdout'),
     ('format-csv', 'csv formatter'),
