@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 
 import sys
+import os
 import argparse
 import functools
+import subprocess
 
 from rdflib import Graph, URIRef, Literal
 from rdflib.compare import to_canonical_graph
@@ -113,6 +115,10 @@ if args.canonical:
     g = to_canonical_graph(g)
 
 g.namespace_manager = namespace_manager
+
+if args.canonical and args.output_format == 'nt':
+    sort = subprocess.Popen(['sort'], stdin=subprocess.PIPE, stdout=args.output_file, env=os.environ.copy().update({'LC_ALL': 'C'}))
+    args.output_file = sort.stdin
 
 g.serialize(destination=args.output_file, format=args.output_format)
 
