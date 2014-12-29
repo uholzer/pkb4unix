@@ -1,0 +1,119 @@
+#!/usr/bin/python3
+
+import sys
+import argparse
+import functools
+
+from rdflib import Graph, URIRef, Literal
+from rdflib.compare import to_canonical_graph
+from rdflib.namespace import NamespaceManager
+
+stdin_fd = sys.stdin.fileno()
+stdin = open(stdin_fd, mode="rb", closefd=False)
+stdout_fd = sys.stdout.fileno()
+stdout = open(stdout_fd, mode="wb", closefd=False)
+
+class FileType(argparse.FileType):
+    def __call__(self, string):
+        if string == '-':
+            return stdout if 'w' in self._mode else stdin
+        return super().__call__(string)
+
+argparser = argparse.ArgumentParser(
+        description='Convert RDF serialization formats'
+)
+argparser.add_argument('input_file',
+        nargs='?',
+        type=FileType('rb'),
+        default=stdin,
+        help="Input filename or - for stdin")
+argparser.add_argument('output_file',
+        nargs='?',
+        type=FileType('wb'),
+        default=stdout,
+        help="Oput filename or - for stdout")
+argparser.add_argument('-i', '--input-format',
+        default="turtle",
+        metavar="F",
+        dest="input_format",
+        help="Serialization format of the input")
+argparser.add_argument('-o', '--output-format',
+        default="nt",
+        metavar="F",
+        dest="output_format",
+        help="Serialization format of the output")
+argparser.add_argument('--canonical',
+        action="store_true",
+        help="Produce canonical output. Implies --drop-ns. (Currently, this is not completely canonical. Blank nodes are assigned canonical identifiers, but Namespace and ordering issues remain.)")
+argparser.add_argument('--keep-ns',
+        action="store_true",
+        dest="keep_ns",
+        help="Keep namespace prefixes declared in the input file (default)")
+argparser.add_argument('--drop-ns',
+        action="store_false",
+        dest="keep_ns",
+        help="Drop namespace prefixes declared in the input file")
+argparser.add_argument('--ns',
+        nargs=2,
+        action="append",
+        help="Set a namepsace. Can be used multiple times.")
+argparser.add_argument('--ns-registry',
+        type=FileType('rb'),
+        dest="ns_registry",
+        help="Take namespace prefixes from a turtle file")
+
+args = argparser.parse_args()
+
+class EmptyNamespaceManager(NamespaceManager):
+    def __init__(self):
+        super().__init__(Graph())
+        # Since super().__init__ declares injects default namespaces into the
+        # store, we need to switch to a fresh store and reset the cache
+        self.graph = Graph()
+        self.reset()
+
+def namespaces(input_graph, keep=True, registry_file=None, explicit=None, prune=True):
+    manager = EmptyNamespaceManager()
+
+    if registry_file:
+        Graph(namespace_manager=manager).parse(source=args.registry_file, format='n3')
+
+    if keep:
+        for prefix, namespace in input_graph.namespace_manager.namespaces():
+            manager.bind(prefix, namespace, replace=True)
+
+    if explicit:
+        for prefix, namespace in explicit:
+            manager.bind(prefix, namespace, replace=True)
+
+    if prune:
+        old_manager = manager
+        manager = EmptyNamespaceManager()
+        for t in input_graph.triples((None, None, None)):
+            for r in t:
+                if isinstance(r, Literal):
+                    r = r.datatype
+                if isinstance(r, URIRef):
+                    try:
+                        manager.bind(*old_manager.compute_qname(r, generate=False)[:2])
+                    except Exception:
+                        pass
+
+    return manager
+
+if args.keep_ns is None:
+    args.keep_ns = not bool(args.canonical)
+
+g = Graph()
+g.parse(source=args.input_file, format=args.input_format)
+
+namespace_manager = namespaces(g, keep=args.keep_ns, registry_file=args.ns_registry, explicit=args.ns)
+
+if args.canonical:
+    g = to_canonical_graph(g)
+
+g.namespace_manager = namespace_manager
+
+g.serialize(destination=args.output_file, format=args.output_format)
+
+
