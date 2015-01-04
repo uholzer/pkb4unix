@@ -78,7 +78,7 @@ def namespaces(input_graph, keep=True, registry_file=None, explicit=None, prune=
     manager = EmptyNamespaceManager()
 
     if registry_file:
-        Graph(namespace_manager=manager).parse(source=args.registry_file, format='n3')
+        Graph(namespace_manager=manager).parse(source=registry_file, format='n3')
 
     if keep:
         for prefix, namespace in input_graph.namespace_manager.namespaces():
