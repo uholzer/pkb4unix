@@ -23,7 +23,9 @@ with open(path.join(here, 'README'), encoding='utf-8') as f:
 
 setup(
     name='pkb4unix',
-    version='0.1.0',
+    # Version number conforming to
+    # http://legacy.python.org/dev/peps/pep-0440/#public-version-identifiers
+    version='0.1.1.dev0',
     description=oneline_description,
     long_description=long_description,
     author='Urs Holzer',
