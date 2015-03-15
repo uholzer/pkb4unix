@@ -6,10 +6,26 @@ if not sys.version_info >= (3,4):
     print("Error: pkb4unix requires at least Python 3.4.")
     exit(1)
 
+
+here = path.abspath(path.dirname(__file__))
+
+# Extract the description from the README
+with open(path.join(here, 'README'), encoding='utf-8') as f:
+    title = f.readline().strip()
+    oneline_description = f.readline().strip()
+    assert len(oneline_description) <= 60, 'Description on line 2 of README too long'
+    assert f.readline().strip() == '', 'README has bad format for extraction of description'
+    long_description = ''
+    for l in iter(f.readline, ''):
+        if l.strip() == '':
+            break
+        long_description += l
+
 setup(
-    name='PKB4Unix',
+    name='pkb4unix',
     version='0.1.0',
-    description='A personal knowledge base using RDF and SPARQL following the UNIX philosophy',
+    description=oneline_description,
+    long_description=long_description,
     author='Urs Holzer',
     author_email='urs@andonyar.com',
     url='http://www.andonyar.com/rec/2012/pkb/',

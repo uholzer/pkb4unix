@@ -1,5 +1,15 @@
-pkb4unix - A personal knowledge base using RDF and SPARQL
-           following the UNIX philosophy
+PKB4Unix
+Tools to handle RDF graphs, inspired by the UNIX philosophy
+
+PKB4Unix provides several command line tools to process RDF graphs. Each of
+them take ntriples as input and output ntriples. As such, they can be used
+easily in pipelines. The ntriples format is line based, but is also valid
+turtle. Also included is a tool that converts between various serialization
+formats. It is also capable of producing canonical ntriples and turtle, which
+makes its output suitable for version control.
+PKB4Unix was originally intended to manage a personal knowledge base. The
+project may however have wider applications. It may be split up or adapted in
+the future.
 
 For more information see
 
